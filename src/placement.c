@@ -267,7 +267,7 @@ clientConstrainPos (Client * c, gboolean show_full)
     if (title_visible <= 0)
     {
         /* CSD window, use the title height from the theme */
-        title_visible = frameDecorationTop (screen_info);
+        title_visible = frameDecorationTop (c);
     }
     min_visible = MAX (title_visible, CLIENT_MIN_VISIBLE);
     ret = 0;

@@ -309,6 +309,7 @@ struct _Client
     netWindowType type;
     sandboxType sandboxed;
     char *sandbox_name;
+    char *container_name;
     gint x;
     gint y;
     gint width;

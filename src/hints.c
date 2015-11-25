@@ -1035,6 +1035,90 @@ getClientID (DisplayInfo *display_info, Window window, gchar **client_id)
 }
 
 gboolean
+getContainerName (DisplayInfo *display_info, Window window, gchar **container_name)
+{
+    Window id;
+    XTextProperty tp;
+
+    TRACE ("entering getContainerName");
+
+    g_return_val_if_fail (container_name != NULL, FALSE);
+    *container_name = NULL;
+    g_return_val_if_fail (window != None, FALSE);
+
+    if (getWindowProp (display_info, window, WM_CLIENT_LEADER, &id) && (id != None))
+    {
+        if (XGetTextProperty (display_info->dpy, id, &tp, display_info->atoms[CONTAINER]))
+        {
+            if (tp.encoding == XA_STRING && tp.format == 8 && tp.nitems != 0)
+            {
+                *container_name = g_strdup ((gchar *) tp.value);
+                XFree (tp.value);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+gboolean
+getSandboxType (DisplayInfo *display_info, Window window, gchar **sandbox_type)
+{
+    Window id;
+    XTextProperty tp;
+
+    TRACE ("entering getSandboxType");
+
+    g_return_val_if_fail (sandbox_type != NULL, FALSE);
+    *sandbox_type = NULL;
+    g_return_val_if_fail (window != None, FALSE);
+
+    if (getWindowProp (display_info, window, WM_CLIENT_LEADER, &id) && (id != None))
+    {
+        if (XGetTextProperty (display_info->dpy, id, &tp, display_info->atoms[FIREJAIL_SANDBOX_TYPE]))
+        {
+            if (tp.encoding == XA_STRING && tp.format == 8 && tp.nitems != 0)
+            {
+                *sandbox_type = g_strdup ((gchar *) tp.value);
+                XFree (tp.value);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+gboolean
+getSandboxName (DisplayInfo *display_info, Window window, gchar **sandbox_name)
+{
+    Window id;
+    XTextProperty tp;
+
+    TRACE ("entering getSandboxName");
+
+    g_return_val_if_fail (sandbox_name != NULL, FALSE);
+    *sandbox_name = NULL;
+    g_return_val_if_fail (window != None, FALSE);
+
+    if (getWindowProp (display_info, window, WM_CLIENT_LEADER, &id) && (id != None))
+    {
+        if (XGetTextProperty (display_info->dpy, id, &tp, display_info->atoms[FIREJAIL_SANDBOX_NAME]))
+        {
+            if (tp.encoding == XA_STRING && tp.format == 8 && tp.nitems != 0)
+            {
+                *sandbox_name = g_strdup ((gchar *) tp.value);
+                XFree (tp.value);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+gboolean
 getWindowCommand (DisplayInfo *display_info, Window window, char ***argv, int *argc)
 {
     Window id;

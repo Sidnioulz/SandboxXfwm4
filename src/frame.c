@@ -46,39 +46,43 @@ typedef struct
 } FramePixmap;
 
 int
-frameDecorationLeft (ScreenInfo *screen_info)
+frameDecorationLeft (Client *c)
 {
     TRACE ("entering frameDecorationLeft");
 
-    g_return_val_if_fail (screen_info != NULL, 0);
-    return screen_info->sides[SIDE_LEFT][ACTIVE].width;
+    g_return_val_if_fail (c != NULL, 0);
+    g_return_val_if_fail (c->screen_info != NULL, 0);
+    return c->screen_info->sides[SIDE_LEFT][frameGetColorIndex(c, ACTIVE)].width;
 }
 
 int
-frameDecorationRight (ScreenInfo *screen_info)
+frameDecorationRight (Client *c)
 {
     TRACE ("entering frameDecorationRight");
 
-    g_return_val_if_fail (screen_info != NULL, 0);
-    return screen_info->sides[SIDE_RIGHT][ACTIVE].width;
+    g_return_val_if_fail (c != NULL, 0);
+    g_return_val_if_fail (c->screen_info != NULL, 0);
+    return c->screen_info->sides[SIDE_RIGHT][frameGetColorIndex(c, ACTIVE)].width;
 }
 
 int
-frameDecorationTop (ScreenInfo *screen_info)
+frameDecorationTop (Client *c)
 {
     TRACE ("entering frameDecorationTop");
 
-    g_return_val_if_fail (screen_info != NULL, 0);
-    return screen_info->title[TITLE_3][ACTIVE].height;
+    g_return_val_if_fail (c != NULL, 0);
+    g_return_val_if_fail (c->screen_info != NULL, 0);
+    return c->screen_info->title[TITLE_3][frameGetColorIndex(c, ACTIVE)].height;
 }
 
 int
-frameDecorationBottom (ScreenInfo *screen_info)
+frameDecorationBottom (Client *c)
 {
     TRACE ("entering frameDecorationBottom");
 
-    g_return_val_if_fail (screen_info != NULL, 0);
-    return screen_info->sides[SIDE_BOTTOM][ACTIVE].height;
+    g_return_val_if_fail (c != NULL, 0);
+    g_return_val_if_fail (c->screen_info != NULL, 0);
+    return c->screen_info->sides[SIDE_BOTTOM][frameGetColorIndex(c, ACTIVE)].height;
 }
 
 int
@@ -92,7 +96,7 @@ frameLeft (Client * c)
         && (!FLAG_TEST_ALL (c->flags, CLIENT_FLAG_MAXIMIZED)
             || !(c->screen_info->params->borderless_maximize)))
     {
-        return c->screen_info->sides[SIDE_LEFT][ACTIVE].width;
+        return c->screen_info->sides[SIDE_LEFT][frameGetColorIndex(c, ACTIVE)].width;
     }
     return 0;
 }
@@ -108,7 +112,7 @@ frameRight (Client * c)
         && (!FLAG_TEST_ALL (c->flags, CLIENT_FLAG_MAXIMIZED)
             || !(c->screen_info->params->borderless_maximize)))
     {
-        return c->screen_info->sides[SIDE_RIGHT][ACTIVE].width;
+        return c->screen_info->sides[SIDE_RIGHT][frameGetColorIndex(c, ACTIVE)].width;
     }
     return 0;
 }
@@ -121,7 +125,7 @@ frameTop (Client * c)
     g_return_val_if_fail (c != NULL, 0);
     if (CLIENT_HAS_FRAME (c))
     {
-        return c->screen_info->title[TITLE_3][ACTIVE].height;
+        return c->screen_info->title[TITLE_3][frameGetColorIndex(c, ACTIVE)].height;
     }
     return 0;
 }
@@ -137,7 +141,7 @@ frameBottom (Client * c)
         && (!FLAG_TEST_ALL (c->flags, CLIENT_FLAG_MAXIMIZED)
             || !(c->screen_info->params->borderless_maximize)))
     {
-        return c->screen_info->sides[SIDE_BOTTOM][ACTIVE].height;
+        return c->screen_info->sides[SIDE_BOTTOM][frameGetColorIndex(c, ACTIVE)].height;
     }
     return 0;
 }
@@ -314,12 +318,12 @@ frameExtentHeight (Client * c)
     return frameHeight(c);
 }
 
-static inline int
+int
 frameGetColorIndex(Client * c, int state)
 {
-    if (!c)
-        return state;
-    else if (c->sandboxed == SANDBOXED_UNTRUSTED)
+    g_return_val_if_fail(c != NULL, state);
+
+    if (c->sandboxed == SANDBOXED_UNTRUSTED)
         return state + 2;
     else if (c->sandboxed == SANDBOXED_PROTECTED)
         return state + 4;
@@ -330,9 +334,9 @@ frameGetColorIndex(Client * c, int state)
 int
 frameGetButtonIndex(Client * c, int state)
 {
-    if (!c)
-        return state;
-    else if (c->sandboxed == SANDBOXED_UNTRUSTED)
+    g_return_val_if_fail(c != NULL, state);
+
+    if (c->sandboxed == SANDBOXED_UNTRUSTED)
         return state + STATE_COUNT;
     else if (c->sandboxed == SANDBOXED_PROTECTED)
         return state + 2*STATE_COUNT;
@@ -547,9 +551,9 @@ frameCreateTitlePixmap (Client * c, int state, int left, int right, xfwmPixmap *
         title_y = MAX (0, frameTop (c) - title_height);
     }
 
-    if (!xfwmPixmapNone(&screen_info->top[3][ACTIVE]))
+    if (!xfwmPixmapNone(&screen_info->top[3][frameGetColorIndex(c, ACTIVE)]))
     {
-        top_height = screen_info->top[3][ACTIVE].height;
+        top_height = screen_info->top[3][frameGetColorIndex(c, ACTIVE)].height;
     }
     else
     {

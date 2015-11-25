@@ -251,6 +251,15 @@ Window                   getNetWMUserTimeWindow                 (DisplayInfo *,
 gboolean                 getClientID                            (DisplayInfo *,
                                                                  Window,
                                                                  gchar **);
+gboolean                 getContainerName                       (DisplayInfo *,
+                                                                 Window,
+                                                                 gchar **);
+gboolean                 getSandboxType                         (DisplayInfo *,
+                                                                 Window,
+                                                                 gchar **);
+gboolean                 getSandboxName                         (DisplayInfo *,
+                                                                 Window,
+                                                                 gchar **);
 gboolean                 getWindowCommand                       (DisplayInfo *,
                                                                  Window,
                                                                  char ***,

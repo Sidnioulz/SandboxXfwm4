@@ -1566,93 +1566,37 @@ clientRestoreSizePos (Client *c)
     return FALSE;
 }
 
-static gboolean
-clientReadSandboxParameters (Client *c)
+static void
+clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
 {
+    //TODO rely on resproto to identify clients http://www.x.org/releases/X11R7.7/doc/resourceproto/resproto.txt
     TRACE ("entering clientReadSandboxParameters %d", c->pid);
 
-    c->sandbox_name = NULL;
     c->sandboxed = UNSANDBOXED;
+    c->sandbox_name = NULL;
+    c->container_name = NULL;
 
-    if (c->pid < 0)
-        return FALSE;
+    g_return_if_fail(c != NULL);
+    g_return_if_fail(c->pid > 0);
 
-    gchar *path = g_strdup_printf ("/proc/%d/environ", c->pid);
-    if (!path)
+    // whether the sandboxed process is untrusted, or trusted but isolated
+    gchar *sandbox_type = NULL;
+    if (getSandboxType(display_info, c->window, &sandbox_type))
     {
-        g_warning ("Cannot create path to environment file for pid %d", c->pid);
-        return FALSE;
-    }
-
-    GFile *file = g_file_new_for_path (path);
-    free (path);
-    if (!file)
-    {
-        g_warning ("Cannot allocate memory for the environment file of pid %d", c->pid);
-        return FALSE;
-    }
-
-    GError *err = NULL;
-    GFileInputStream *istream = g_file_read (file, NULL, &err);
-    if (err)
-    {
-        g_warning ("Cannot open environment file for pid %d: %s", c->pid, err->message);
-        g_error_free (err);
-        g_object_unref (file);
-        return FALSE;
-    }
-
-    char env[24000];
-    env[23999] = '\0';
-    gsize read = 0;
-    if (FALSE == g_input_stream_read_all (G_INPUT_STREAM (istream), env, 24000, &read, NULL, &err))
-    {
-        g_warning ("Cannot open environment file for pid %d: %s", c->pid, err->message);
-        g_error_free (err);
-        g_object_unref (istream);
-        g_object_unref (file);
-        return FALSE;
-    }
-
-    g_object_unref (istream);
-    g_object_unref (file);
-
-    gsize index;
-    for (index=0; index<read; index++)
-    {
-        if (g_str_has_prefix (env + index, "FIREJAIL_SANDBOX_TYPE="))
-        {
-            char *type = env + index + strlen ("FIREJAIL_SANDBOX_TYPE=");
-            //TODO process type
-            TRACE ("pid %d is SANDBOXED", c->pid);
+        if (g_strcmp0 (sandbox_type, "untrusted") == 0)
             c->sandboxed = SANDBOXED_UNTRUSTED;
-        }
-        else if (g_str_has_prefix (env + index, "FIREJAIL_SANDBOX_NAME="))
-        {
-            char *name = env + index + strlen ("FIREJAIL_SANDBOX_NAME=");
-            TRACE ("pid %d is named %s", c->pid, name);
-            c->sandbox_name = g_strdup (name);
-        }
-        else if (g_str_has_prefix (env + index, "container="))
-        {
-            char *container = env + index + strlen ("container=");
-
-            TRACE ("pid %d is sandboxed by container %s", c->pid, container);
-            c->sandbox_name = g_strdup_printf ("Sandboxed by %s", container);
-
-            // we don't erase specific sandbox statuses for compatible sandboxes
-            if (!c->sandboxed)
-                c->sandboxed = SANDBOXED_UNTRUSTED;
-        }
-
-        index += strlen (env + index);
+        else if (g_strcmp0 (sandbox_type, "protected") == 0)
+            c->sandboxed = SANDBOXED_PROTECTED;
+        free(sandbox_type);
     }
 
-    TRACE ("pid %d is %s and named '%s'",
-           c->pid,
-           (c->sandboxed == UNSANDBOXED ? "unsandboxed" : "sandboxed"),
-           c->sandbox_name);
-    return TRUE;
+    // the name of the sandbox domain to which this process belongs (internal to containers)
+    if (!getSandboxName(display_info, c->window, &c->sandbox_name))
+      c->sandbox_name = NULL;
+
+    // the identity of the container (e.g. Docker, MBox, Firejail)
+    if (!getContainerName(display_info, c->window, &c->container_name))
+      c->container_name = NULL;
 }
 
 Client *
@@ -1875,21 +1819,23 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     clientAddUserTimeWin (c);
     clientGetUserTime (c);
 
-    /*client PID */
+    /* client PID */
     getHint (display_info, c->window, NET_WM_PID, (long *) &pid);
     c->pid = (GPid) pid;
     TRACE ("Client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
-    g_printf ("Client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
 
-    /* firejail environment variables */
-//    clientReadSandboxParameters(c); //FIXME
-    if (pid == 1)
-        c->sandboxed = SANDBOXED_UNTRUSTED;
+    /* firejail sandbox */
+    clientReadSandboxParameters(display_info, c);
 
     if (c->sandboxed)
+    {
       clientUpdateName(c);
-
-    g_printf ("Client is %s and named '%s'\n", c->sandboxed? "sandboxed":"unsandboxed", c->sandbox_name);
+      g_debug ("Client \"%s\" is %s and run by container \"%s\" in the domain \"%s\".\n\n",
+                c->name,
+                c->sandboxed? (c->sandboxed == SANDBOXED_PROTECTED? "protected" : "sandboxed") : "unsandboxed",
+                c->container_name,
+                c->sandbox_name);
+    }
 
     /* Apply startup notification properties if available */
     sn_client_startup_properties (c);

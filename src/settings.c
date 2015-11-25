@@ -575,7 +575,7 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
     setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[UNTRUSTEDACTIVE], "#bbb", "dark", "selected");
     setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[UNTRUSTEDINACTIVE], "#ddd", "dark", "insensitive");
 
-    setXfwmColorDirect (screen_info, &screen_info->title_colors[PROTECTEDACTIVE], "#333", "fg", "selected");
+    setXfwmColorDirect (screen_info, &screen_info->title_colors[PROTECTEDACTIVE], "#44fe55", "fg", "selected");
     setXfwmColorDirect (screen_info, &screen_info->title_colors[PROTECTEDINACTIVE], "#666", "fg", "insensitive");
     setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[PROTECTEDACTIVE], "#bbb", "dark", "selected");
     setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[PROTECTEDINACTIVE], "#ddd", "dark", "insensitive");
@@ -641,7 +641,7 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
             g_snprintf(imagename, sizeof (imagename), "%s-untrusted-%s", button_names[i], button_state_names[j]);
             xfwmPixmapLoad (screen_info, &screen_info->buttons[i][j+STATE_COUNT], backup? backup:theme, imagename, colsym);
 
-            g_snprintf(imagename, sizeof (imagename), "%s-untrusted-%s", button_names[i], button_state_names[j]);
+            g_snprintf(imagename, sizeof (imagename), "%s-protected-%s", button_names[i], button_state_names[j]);
             xfwmPixmapLoad (screen_info, &screen_info->buttons[i][j+2*STATE_COUNT], backup? backup:theme, imagename, colsym);
         }
     }

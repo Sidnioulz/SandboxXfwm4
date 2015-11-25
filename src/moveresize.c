@@ -803,7 +803,7 @@ clientMoveTile (Client *c, XMotionEvent *xevent)
     disp_max_x = rect.x + rect.width;
     disp_max_y = rect.y + rect.height;
 
-    dist = MIN (TILE_DISTANCE, frameDecorationTop (screen_info) / 2);
+    dist = MIN (TILE_DISTANCE, frameDecorationTop (c) / 2);
     dist_corner = (MIN (disp_max_x, disp_max_y)) / BORDER_TILE_LENGTH_RELATIVE;
 
     /* make sure the mouse position is inside the screen edges */

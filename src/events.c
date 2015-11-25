@@ -2012,10 +2012,10 @@ handleClientMessage (DisplayInfo *display_info, XClientMessageEvent * ev)
             TRACE ("window (0x%lx) has received a NET_REQUEST_FRAME_EXTENTS event", ev->window);
             /* Size estimate from the decoration extents */
             setNetFrameExtents (display_info, ev->window,
-                                frameDecorationTop (screen_info),
-                                frameDecorationLeft (screen_info),
-                                frameDecorationRight (screen_info),
-                                frameDecorationBottom (screen_info));
+                                frameDecorationTop (c),
+                                frameDecorationLeft (c),
+                                frameDecorationRight (c),
+                                frameDecorationBottom (c));
         }
         else if ((ev->message_type == display_info->atoms[MANAGER]) && (ev->format == 32))
         {
