@@ -201,6 +201,15 @@ struct _XfwmParams
     int title_horizontal_offset;
     int title_shadow[2];
     int wrap_resistance;
+    int fallback_button_offset;
+    int fallback_button_spacing;
+    int fallback_maximized_offset;
+    int fallback_shadow_delta_height;
+    int fallback_shadow_delta_width;
+    int fallback_shadow_delta_x;
+    int fallback_shadow_delta_y;
+    int fallback_title_horizontal_offset;
+    int fallback_title_shadow[2];
     gboolean borderless_maximize;
     gboolean titleless_maximize;
     gboolean box_move;
@@ -243,6 +252,10 @@ struct _XfwmParams
     gboolean wrap_windows;
     gboolean wrap_workspaces;
     gboolean zoom_desktop;
+    gboolean sandboxed_theme_fallback;
+    gboolean fallback_full_width_title;
+    gboolean fallback_title_vertical_offset_active;
+    gboolean fallback_title_vertical_offset_inactive;
 };
 
 gboolean                 loadSettings                           (ScreenInfo *);

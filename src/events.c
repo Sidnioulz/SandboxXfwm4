@@ -1723,7 +1723,7 @@ handlePropertyNotify (DisplayInfo *display_info, XPropertyEvent * ev)
                 {
                     c->group_leader = c->wmhints->window_group;
                 }
-                if ((c->wmhints->flags & IconPixmapHint) && (screen_info->params->show_app_icon))
+                if ((c->wmhints->flags & IconPixmapHint) && (screen_info->params->show_app_icon || c->sandboxed))
                 {
                     clientUpdateIcon (c);
                 }
@@ -1822,7 +1822,7 @@ handlePropertyNotify (DisplayInfo *display_info, XPropertyEvent * ev)
                 FLAG_UNSET (c->xfwm_flags, XFWM_FLAG_OPACITY_LOCKED);
             }
         }
-        else if ((screen_info->params->show_app_icon) &&
+        else if ((screen_info->params->show_app_icon || c->sandboxed) &&
                  ((ev->atom == display_info->atoms[NET_WM_ICON]) ||
                   (ev->atom == display_info->atoms[KWM_WIN_ICON])))
         {

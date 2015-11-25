@@ -62,6 +62,9 @@ gboolean                 xfwmPixmapLoad                         (ScreenInfo *,
                                                                  const gchar *,
                                                                  const gchar *,
                                                                  xfwmColorSymbol *);
+gboolean                 xfwmPixmapIsLoadable                   (const gchar *,
+                                                                 const gchar *,
+                                                                 xfwmColorSymbol *);
 void                     xfwmPixmapCreate                       (ScreenInfo *,
                                                                  xfwmPixmap *,
                                                                  gint,

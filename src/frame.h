@@ -32,6 +32,8 @@
 #include "mypixmap.h"
 #include "client.h"
 
+int                      frameGetButtonIndex                    (Client * c,
+                                                                 int state);
 int                      frameDecorationLeft                    (ScreenInfo *);
 int                      frameDecorationRight                   (ScreenInfo *);
 int                      frameDecorationTop                     (ScreenInfo *);

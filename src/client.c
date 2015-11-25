@@ -183,6 +183,14 @@ clientCreateTitleName (Client *c, gchar *name, gchar *hostname)
         /* TRANSLATORS: "(on %s)" is like "running on" the name of the other host */
         title = g_strdup_printf (_("%s (on %s)"), name, hostname);
     }
+    else if (c->sandboxed == SANDBOXED_UNTRUSTED)
+    {
+        title = g_strdup_printf ("UNTRUSTED - %s", name);
+    }
+    else if (c->sandboxed == SANDBOXED_PROTECTED)
+    {
+        title = g_strdup_printf ("PROTECTED - %s", name);
+    }
     else
     {
         title = g_strdup (name);
@@ -1328,6 +1336,10 @@ clientFree (Client *c)
     {
         g_free (c->name);
     }
+    if (c->sandbox_name)
+    {
+        g_free (c->sandbox_name);
+    }
     if (c->hostname)
     {
         g_free (c->hostname);
@@ -1456,7 +1468,7 @@ clientUpdateIconPix (Client *c)
         xfwmPixmapFree (&c->appmenu[i]);
     }
 
-    if (xfwmPixmapNone(&screen_info->buttons[MENU_BUTTON][ACTIVE]))
+    if (xfwmPixmapNone(&screen_info->buttons[MENU_BUTTON][frameGetButtonIndex(c, ACTIVE)]))
     {
         /* The current theme has no menu button */
         return;
@@ -1464,13 +1476,13 @@ clientUpdateIconPix (Client *c)
 
     for (i = 0; i < STATE_TOGGLED; i++)
     {
-        if (!xfwmPixmapNone(&screen_info->buttons[MENU_BUTTON][i]))
+        if (!xfwmPixmapNone(&screen_info->buttons[MENU_BUTTON][frameGetButtonIndex(c, i)]))
         {
-            xfwmPixmapDuplicate (&screen_info->buttons[MENU_BUTTON][i], &c->appmenu[i]);
+            xfwmPixmapDuplicate (&screen_info->buttons[MENU_BUTTON][frameGetButtonIndex(c, i)], &c->appmenu[i]);
         }
     }
-    size = MIN (screen_info->buttons[MENU_BUTTON][ACTIVE].width,
-                screen_info->buttons[MENU_BUTTON][ACTIVE].height);
+    size = MIN (screen_info->buttons[MENU_BUTTON][frameGetButtonIndex(c, ACTIVE)].width,
+                screen_info->buttons[MENU_BUTTON][frameGetButtonIndex(c, ACTIVE)].height);
 
     if (size > 1)
     {
@@ -1552,6 +1564,95 @@ clientRestoreSizePos (Client *c)
     }
 
     return FALSE;
+}
+
+static gboolean
+clientReadSandboxParameters (Client *c)
+{
+    TRACE ("entering clientReadSandboxParameters %d", c->pid);
+
+    c->sandbox_name = NULL;
+    c->sandboxed = UNSANDBOXED;
+
+    if (c->pid < 0)
+        return FALSE;
+
+    gchar *path = g_strdup_printf ("/proc/%d/environ", c->pid);
+    if (!path)
+    {
+        g_warning ("Cannot create path to environment file for pid %d", c->pid);
+        return FALSE;
+    }
+
+    GFile *file = g_file_new_for_path (path);
+    free (path);
+    if (!file)
+    {
+        g_warning ("Cannot allocate memory for the environment file of pid %d", c->pid);
+        return FALSE;
+    }
+
+    GError *err = NULL;
+    GFileInputStream *istream = g_file_read (file, NULL, &err);
+    if (err)
+    {
+        g_warning ("Cannot open environment file for pid %d: %s", c->pid, err->message);
+        g_error_free (err);
+        g_object_unref (file);
+        return FALSE;
+    }
+
+    char env[24000];
+    env[23999] = '\0';
+    gsize read = 0;
+    if (FALSE == g_input_stream_read_all (G_INPUT_STREAM (istream), env, 24000, &read, NULL, &err))
+    {
+        g_warning ("Cannot open environment file for pid %d: %s", c->pid, err->message);
+        g_error_free (err);
+        g_object_unref (istream);
+        g_object_unref (file);
+        return FALSE;
+    }
+
+    g_object_unref (istream);
+    g_object_unref (file);
+
+    gsize index;
+    for (index=0; index<read; index++)
+    {
+        if (g_str_has_prefix (env + index, "FIREJAIL_SANDBOX_TYPE="))
+        {
+            char *type = env + index + strlen ("FIREJAIL_SANDBOX_TYPE=");
+            //TODO process type
+            TRACE ("pid %d is SANDBOXED", c->pid);
+            c->sandboxed = SANDBOXED_UNTRUSTED;
+        }
+        else if (g_str_has_prefix (env + index, "FIREJAIL_SANDBOX_NAME="))
+        {
+            char *name = env + index + strlen ("FIREJAIL_SANDBOX_NAME=");
+            TRACE ("pid %d is named %s", c->pid, name);
+            c->sandbox_name = g_strdup (name);
+        }
+        else if (g_str_has_prefix (env + index, "container="))
+        {
+            char *container = env + index + strlen ("container=");
+
+            TRACE ("pid %d is sandboxed by container %s", c->pid, container);
+            c->sandbox_name = g_strdup_printf ("Sandboxed by %s", container);
+
+            // we don't erase specific sandbox statuses for compatible sandboxes
+            if (!c->sandboxed)
+                c->sandboxed = SANDBOXED_UNTRUSTED;
+        }
+
+        index += strlen (env + index);
+    }
+
+    TRACE ("pid %d is %s and named '%s'",
+           c->pid,
+           (c->sandboxed == UNSANDBOXED ? "unsandboxed" : "sandboxed"),
+           c->sandbox_name);
+    return TRUE;
 }
 
 Client *
@@ -1778,6 +1879,17 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     getHint (display_info, c->window, NET_WM_PID, (long *) &pid);
     c->pid = (GPid) pid;
     TRACE ("Client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
+    g_printf ("Client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
+
+    /* firejail environment variables */
+//    clientReadSandboxParameters(c); //FIXME
+    if (pid == 1)
+        c->sandboxed = SANDBOXED_UNTRUSTED;
+
+    if (c->sandboxed)
+      clientUpdateName(c);
+
+    g_printf ("Client is %s and named '%s'\n", c->sandboxed? "sandboxed":"unsandboxed", c->sandbox_name);
 
     /* Apply startup notification properties if available */
     sn_client_startup_properties (c);
@@ -3922,32 +4034,32 @@ clientGetButtonPixmap (Client *c, int button, int state)
             break;
         case SHADE_BUTTON:
             if (FLAG_TEST (c->flags, CLIENT_FLAG_SHADED)
-                && (!xfwmPixmapNone(&screen_info->buttons[SHADE_BUTTON][state + STATE_TOGGLED])))
+                && (!xfwmPixmapNone(&screen_info->buttons[SHADE_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)])))
             {
-                return &screen_info->buttons[SHADE_BUTTON][state + STATE_TOGGLED];
+                return &screen_info->buttons[SHADE_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)];
             }
-            return &screen_info->buttons[SHADE_BUTTON][state];
+            return &screen_info->buttons[SHADE_BUTTON][frameGetButtonIndex(c, state)];
             break;
         case STICK_BUTTON:
             if (FLAG_TEST (c->flags, CLIENT_FLAG_STICKY)
-                && (!xfwmPixmapNone(&screen_info->buttons[STICK_BUTTON][state + STATE_TOGGLED])))
+                && (!xfwmPixmapNone(&screen_info->buttons[STICK_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)])))
             {
-                return &screen_info->buttons[STICK_BUTTON][state + STATE_TOGGLED];
+                return &screen_info->buttons[STICK_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)];
             }
-            return &screen_info->buttons[STICK_BUTTON][state];
+            return &screen_info->buttons[STICK_BUTTON][frameGetButtonIndex(c, state)];
             break;
         case MAXIMIZE_BUTTON:
             if (FLAG_TEST (c->flags, CLIENT_FLAG_MAXIMIZED)
-                && (!xfwmPixmapNone(&screen_info->buttons[MAXIMIZE_BUTTON][state + STATE_TOGGLED])))
+                && (!xfwmPixmapNone(&screen_info->buttons[MAXIMIZE_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)])))
             {
-                return &screen_info->buttons[MAXIMIZE_BUTTON][state + STATE_TOGGLED];
+                return &screen_info->buttons[MAXIMIZE_BUTTON][frameGetButtonIndex(c, state + STATE_TOGGLED)];
             }
-            return &screen_info->buttons[MAXIMIZE_BUTTON][state];
+            return &screen_info->buttons[MAXIMIZE_BUTTON][frameGetButtonIndex(c, state)];
             break;
         default:
             break;
     }
-    return &screen_info->buttons[button][state];
+    return &screen_info->buttons[button][frameGetButtonIndex(c, state)];
 }
 
 int

@@ -981,6 +981,35 @@ xfwmPixmapLoad (ScreenInfo * screen_info, xfwmPixmap * pm, const gchar * dir, co
     return TRUE;
 }
 
+gboolean
+xfwmPixmapIsLoadable (const gchar * dir, const gchar * file, xfwmColorSymbol * cs)
+{
+    gchar *filename;
+    gchar *filexpm;
+    GdkPixbuf *pixbuf;
+
+    TRACE ("entering xfwmPixmapIsLoadable(%s)", file);
+
+    g_return_val_if_fail (dir != NULL, FALSE);
+    g_return_val_if_fail (file != NULL, FALSE);
+
+    filexpm = g_strdup_printf ("%s.%s", file, "xpm");
+    filename = g_build_filename (dir, filexpm, NULL);
+    g_free (filexpm);
+    pixbuf = xpm_image_load (filename, cs);
+    g_free (filename);
+
+    /* Compose with other image formats, if any available. */
+    pixbuf = xfwmPixmapCompose (pixbuf, dir, file);
+    if (!pixbuf)
+    {
+        return FALSE;
+    }
+
+    g_object_unref (pixbuf);
+    return TRUE;
+}
+
 void
 xfwmPixmapCreate (ScreenInfo * screen_info, xfwmPixmap * pm,
                   gint width, gint height)

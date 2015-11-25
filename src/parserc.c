@@ -41,8 +41,8 @@
 
 #define TOINT(x)                (x ? atoi(x) : 0)
 
-gboolean
-parseRc (const gchar * file, const gchar * dir, Settings *rc)
+static gboolean
+_parseRc (const gchar * file, const gchar * dir, Settings *rc, const gchar * prefix)
 {
     gchar buf[255];
     gchar *filename, *lvalue, *rvalue;
@@ -74,11 +74,33 @@ parseRc (const gchar * file, const gchar * dir, Settings *rc)
         rvalue = strtok (NULL, "\n");
         if ((lvalue) && (rvalue))
         {
-            setValue (lvalue, rvalue, rc);
+            if (prefix)
+            {
+                gchar *prefixed_lvalue = g_strdup_printf ("%s%s", prefix, lvalue);
+                if (prefixed_lvalue)
+                {
+                    setValue (prefixed_lvalue, rvalue, rc);
+                    g_free (prefixed_lvalue);
+                }
+            }
+            else
+                setValue (lvalue, rvalue, rc);
         }
     }
     fclose (fp);
     return TRUE;
+}
+
+gboolean
+parseRc (const gchar * file, const gchar * dir, Settings *rc)
+{
+    return _parseRc (file, dir, rc, NULL);
+}
+
+gboolean
+parseRcWithPrefix (const gchar * file, const gchar * dir, Settings *rc, const gchar * prefix)
+{
+    return _parseRc (file, dir, rc, prefix);
 }
 
 gboolean

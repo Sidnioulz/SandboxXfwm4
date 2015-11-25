@@ -34,6 +34,10 @@
 gboolean                 parseRc                                (const gchar *,
                                                                  const gchar *,
                                                                  Settings *);
+gboolean                 parseRcWithPrefix                      (const gchar *,
+                                                                 const gchar *,
+                                                                 Settings *,
+                                                                 const gchar *);
 gboolean                 checkRc                                (Settings *);
 GValue                  *getGValue                              (const gchar *,
                                                                  Settings *);

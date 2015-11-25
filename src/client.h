@@ -258,6 +258,14 @@ netWindowType;
 
 typedef enum
 {
+    UNSANDBOXED = 0,
+    SANDBOXED_UNTRUSTED = (1 << 0),
+    SANDBOXED_PROTECTED = (1 << 1)
+}
+sandboxType;
+
+typedef enum
+{
     TILE_NONE = 0,
     TILE_LEFT,
     TILE_RIGHT,
@@ -299,6 +307,8 @@ struct _Client
     Client *next;
     Client *prev;
     netWindowType type;
+    sandboxType sandboxed;
+    char *sandbox_name;
     gint x;
     gint y;
     gint width;

@@ -308,20 +308,44 @@ myScreenInit (DisplayInfo *display_info, GdkScreen *gscr, unsigned long event_ma
     screen_info->title_colors[ACTIVE].allocated = FALSE;
     screen_info->title_colors[INACTIVE].gc = NULL;
     screen_info->title_colors[INACTIVE].allocated = FALSE;
+    screen_info->title_colors[UNTRUSTEDACTIVE].gc = NULL;
+    screen_info->title_colors[UNTRUSTEDACTIVE].allocated = FALSE;
+    screen_info->title_colors[UNTRUSTEDINACTIVE].gc = NULL;
+    screen_info->title_colors[UNTRUSTEDINACTIVE].allocated = FALSE;
+    screen_info->title_colors[PROTECTEDACTIVE].gc = NULL;
+    screen_info->title_colors[PROTECTEDACTIVE].allocated = FALSE;
+    screen_info->title_colors[PROTECTEDINACTIVE].gc = NULL;
+    screen_info->title_colors[PROTECTEDINACTIVE].allocated = FALSE;
     screen_info->title_shadow_colors[ACTIVE].gc = NULL;
     screen_info->title_shadow_colors[ACTIVE].allocated = FALSE;
     screen_info->title_shadow_colors[INACTIVE].gc = NULL;
     screen_info->title_shadow_colors[INACTIVE].allocated = FALSE;
+    screen_info->title_shadow_colors[UNTRUSTEDACTIVE].gc = NULL;
+    screen_info->title_shadow_colors[UNTRUSTEDACTIVE].allocated = FALSE;
+    screen_info->title_shadow_colors[UNTRUSTEDINACTIVE].gc = NULL;
+    screen_info->title_shadow_colors[UNTRUSTEDINACTIVE].allocated = FALSE;
+    screen_info->title_shadow_colors[PROTECTEDACTIVE].gc = NULL;
+    screen_info->title_shadow_colors[PROTECTEDACTIVE].allocated = FALSE;
+    screen_info->title_shadow_colors[PROTECTEDINACTIVE].gc = NULL;
+    screen_info->title_shadow_colors[PROTECTEDINACTIVE].allocated = FALSE;
 
     for (i = 0; i < SIDE_COUNT; i++)
     {
         xfwmPixmapInit (screen_info, &screen_info->sides[i][ACTIVE]);
         xfwmPixmapInit (screen_info, &screen_info->sides[i][INACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->sides[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->sides[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->sides[i][PROTECTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->sides[i][PROTECTEDINACTIVE]);
     }
     for (i = 0; i < CORNER_COUNT; i++)
     {
         xfwmPixmapInit (screen_info, &screen_info->corners[i][ACTIVE]);
         xfwmPixmapInit (screen_info, &screen_info->corners[i][INACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->corners[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->corners[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->corners[i][PROTECTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->corners[i][PROTECTEDINACTIVE]);
     }
     for (i = 0; i < BUTTON_COUNT; i++)
     {
@@ -334,8 +358,17 @@ myScreenInit (DisplayInfo *display_info, GdkScreen *gscr, unsigned long event_ma
     {
         xfwmPixmapInit (screen_info, &screen_info->title[i][ACTIVE]);
         xfwmPixmapInit (screen_info, &screen_info->title[i][INACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->title[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->title[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->title[i][PROTECTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->title[i][PROTECTEDINACTIVE]);
+
         xfwmPixmapInit (screen_info, &screen_info->top[i][ACTIVE]);
         xfwmPixmapInit (screen_info, &screen_info->top[i][INACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->top[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->top[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->top[i][PROTECTEDACTIVE]);
+        xfwmPixmapInit (screen_info, &screen_info->top[i][PROTECTEDINACTIVE]);
     }
 
     screen_info->monitors_index = NULL;

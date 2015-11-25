@@ -244,6 +244,42 @@ loadXfconfData (ScreenInfo *screen_info, Settings *rc)
 
 }
 
+static void
+setXfwmColorDirect (ScreenInfo *screen_info, XfwmColor *color, gchar *spec, const gchar * name, const gchar * state)
+{
+    if (color->allocated)
+    {
+        gdk_colormap_free_colors (gdk_screen_get_rgb_colormap (screen_info->gscr), &color->col, 1);
+        color->allocated = FALSE;
+    }
+
+    if (gdk_color_parse (spec, &color->col))
+    {
+      if (gdk_colormap_alloc_color (gdk_screen_get_rgb_colormap (screen_info->gscr),
+                                    &color->col, TRUE, TRUE))
+      {
+          color->allocated = TRUE;
+          if (color->gc)
+          {
+              g_object_unref (G_OBJECT (color->gc));
+          }
+          color->gc = gdk_gc_new (myScreenGetGdkWindow (screen_info));
+          gdk_gc_copy (color->gc, getUIStyle_gc (myScreenGetGtkWidget (screen_info), name, state));
+          gdk_gc_set_foreground (color->gc, &color->col);
+      }
+      else
+      {
+          gdk_beep ();
+          g_message (_("%s: Cannot parse color %s\n"), g_get_prgname (), spec);
+      }
+    }
+    else
+    {
+        gdk_beep ();
+        g_message (_("%s: Cannot parse color %s\n"), g_get_prgname (), spec);
+    }
+}
+
 /* Simple helper function to avoid copy/paste of code */
 static void
 setXfwmColor (ScreenInfo *screen_info, XfwmColor *color, Settings *rc, int id, const gchar * name, const gchar * state)
@@ -399,7 +435,7 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
         NULL
     };
 
-    gchar imagename[30];
+    gchar imagename[60];
     GValue tmp_val = { 0, };
     GValue tmp_val2 = { 0, };
     DisplayInfo *display_info;
@@ -469,6 +505,35 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
     colsym[XPM_COLOR_SYMBOL_SIZE].name = NULL;
     colsym[XPM_COLOR_SYMBOL_SIZE].value = NULL;
 
+    /* Figure out if we'll use the current theme for sandboxed applications, or Default */
+    gchar *backup = NULL;
+    gboolean loadable = xfwmPixmapIsLoadable (theme, "left-untrusted-active", colsym);
+    setBooleanValue("sandboxed_theme_fallback", !loadable, rc);
+    screen_info->params->sandboxed_theme_fallback = !loadable;
+    if (!loadable)
+    {
+        TRACE ("Current theme ('%s') does not support sandboxed app theming, will use Default for sandboxed apps\n", theme);
+        backup = getThemeDir ("Default", THEMERC);
+        parseRcWithPrefix (THEMERC, backup, rc, "fallback_");
+
+        // initialise the fallback values
+        screen_info->params->fallback_button_spacing = getIntValue ("fallback_button_spacing", rc);
+        screen_info->params->fallback_button_offset = getIntValue ("fallback_button_offset", rc);
+        screen_info->params->fallback_shadow_delta_x = - getIntValue ("fallback_shadow_delta_x", rc);
+        screen_info->params->fallback_shadow_delta_y = - getIntValue ("fallback_shadow_delta_y", rc);
+        screen_info->params->fallback_shadow_delta_width = - getIntValue ("fallback_shadow_delta_width", rc);
+        screen_info->params->fallback_shadow_delta_height = - getIntValue ("fallback_shadow_delta_height", rc);
+
+        screen_info->params->fallback_full_width_title = getBoolValue ("fallback_full_width_title", rc);
+        screen_info->params->fallback_title_shadow[ACTIVE] = getTitleShadow (rc, "fallback_title_shadow_active");
+        screen_info->params->fallback_title_shadow[INACTIVE] = getTitleShadow (rc, "fallback_title_shadow_inactive");
+        screen_info->params->fallback_maximized_offset = getIntValue ("fallback_maximized_offset", rc);
+
+        screen_info->params->fallback_title_vertical_offset_active = getIntValue ("fallback_title_vertical_offset_active", rc);
+        screen_info->params->fallback_title_vertical_offset_inactive = getIntValue ("fallback_title_vertical_offset_inactive", rc);
+        screen_info->params->fallback_title_horizontal_offset = getIntValue ("fallback_title_horizontal_offset", rc);
+    }
+
     /* Standard double click time ... */
     display_info->double_click_time = abs (getIntValue ("double_click_time", rc));
     g_value_init (&tmp_val, G_TYPE_INT);
@@ -505,6 +570,16 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
     setXfwmColor (screen_info, &screen_info->title_shadow_colors[ACTIVE], rc, 2, "dark", "selected");
     setXfwmColor (screen_info, &screen_info->title_shadow_colors[INACTIVE], rc, 3, "dark", "insensitive");
 
+    setXfwmColorDirect (screen_info, &screen_info->title_colors[UNTRUSTEDACTIVE], "#fe4455", "fg", "selected");
+    setXfwmColorDirect (screen_info, &screen_info->title_colors[UNTRUSTEDINACTIVE], "#666", "fg", "insensitive");
+    setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[UNTRUSTEDACTIVE], "#bbb", "dark", "selected");
+    setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[UNTRUSTEDINACTIVE], "#ddd", "dark", "insensitive");
+
+    setXfwmColorDirect (screen_info, &screen_info->title_colors[PROTECTEDACTIVE], "#333", "fg", "selected");
+    setXfwmColorDirect (screen_info, &screen_info->title_colors[PROTECTEDINACTIVE], "#666", "fg", "insensitive");
+    setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[PROTECTEDACTIVE], "#bbb", "dark", "selected");
+    setXfwmColorDirect (screen_info, &screen_info->title_shadow_colors[PROTECTEDINACTIVE], "#ddd", "dark", "insensitive");
+
     if (screen_info->black_gc)
     {
         g_object_unref (G_OBJECT (screen_info->black_gc));
@@ -526,17 +601,35 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
 
         g_snprintf(imagename, sizeof (imagename), "%s-active", side_names[i]);
         xfwmPixmapLoad (screen_info, &screen_info->sides[i][ACTIVE], theme, imagename, colsym);
-
         g_snprintf(imagename, sizeof (imagename), "%s-inactive", side_names[i]);
         xfwmPixmapLoad (screen_info, &screen_info->sides[i][INACTIVE], theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "%s-untrusted-active", side_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->sides[i][UNTRUSTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "%s-untrusted-inactive", side_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->sides[i][UNTRUSTEDINACTIVE], backup? backup:theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "%s-protected-active", side_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->sides[i][PROTECTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "%s-protected-inactive", side_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->sides[i][PROTECTEDINACTIVE], backup? backup:theme, imagename, colsym);
     }
     for (i = 0; i < CORNER_COUNT; i++)
     {
         g_snprintf(imagename, sizeof (imagename), "%s-active", corner_names[i]);
         xfwmPixmapLoad (screen_info, &screen_info->corners[i][ACTIVE], theme, imagename, colsym);
-
         g_snprintf(imagename, sizeof (imagename), "%s-inactive", corner_names[i]);
         xfwmPixmapLoad (screen_info, &screen_info->corners[i][INACTIVE], theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "%s-untrusted-active", corner_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->corners[i][UNTRUSTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "%s-untrusted-inactive", corner_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->corners[i][UNTRUSTEDINACTIVE], backup? backup:theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "%s-protected-active", corner_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->corners[i][PROTECTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "%s-protected-inactive", corner_names[i]);
+        xfwmPixmapLoad (screen_info, &screen_info->corners[i][PROTECTEDINACTIVE], backup? backup:theme, imagename, colsym);
     }
     for (i = 0; i < BUTTON_COUNT; i++)
     {
@@ -544,21 +637,42 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
         {
             g_snprintf(imagename, sizeof (imagename), "%s-%s", button_names[i], button_state_names[j]);
             xfwmPixmapLoad (screen_info, &screen_info->buttons[i][j], theme, imagename, colsym);
+
+            g_snprintf(imagename, sizeof (imagename), "%s-untrusted-%s", button_names[i], button_state_names[j]);
+            xfwmPixmapLoad (screen_info, &screen_info->buttons[i][j+STATE_COUNT], backup? backup:theme, imagename, colsym);
+
+            g_snprintf(imagename, sizeof (imagename), "%s-untrusted-%s", button_names[i], button_state_names[j]);
+            xfwmPixmapLoad (screen_info, &screen_info->buttons[i][j+2*STATE_COUNT], backup? backup:theme, imagename, colsym);
         }
     }
     for (i = 0; i < TITLE_COUNT; i++)
     {
         g_snprintf(imagename, sizeof (imagename), "title-%d-active", i + 1);
         xfwmPixmapLoad (screen_info, &screen_info->title[i][ACTIVE], theme, imagename, colsym);
-
         g_snprintf(imagename, sizeof (imagename), "title-%d-inactive", i + 1);
         xfwmPixmapLoad (screen_info, &screen_info->title[i][INACTIVE], theme, imagename, colsym);
-
         g_snprintf(imagename, sizeof (imagename), "top-%d-active", i + 1);
         xfwmPixmapLoad (screen_info, &screen_info->top[i][ACTIVE], theme, imagename, colsym);
-
         g_snprintf(imagename, sizeof (imagename), "top-%d-inactive", i + 1);
         xfwmPixmapLoad (screen_info, &screen_info->top[i][INACTIVE], theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "title-%d-untrusted-active", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->title[i][UNTRUSTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "title-%d-untrusted-inactive", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->title[i][UNTRUSTEDINACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "top-%d-untrusted-active", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->top[i][UNTRUSTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "top-%d-untrusted-inactive", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->top[i][UNTRUSTEDINACTIVE], backup? backup:theme, imagename, colsym);
+
+        g_snprintf(imagename, sizeof (imagename), "title-%d-protected-active", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->title[i][PROTECTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "title-%d-protected-inactive", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->title[i][PROTECTEDINACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "top-%d-protected-active", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->top[i][PROTECTEDACTIVE], backup? backup:theme, imagename, colsym);
+        g_snprintf(imagename, sizeof (imagename), "top-%d-protected-inactive", i + 1);
+        xfwmPixmapLoad (screen_info, &screen_info->top[i][PROTECTEDINACTIVE], backup? backup:theme, imagename, colsym);
     }
 
     screen_info->box_gc = createGC (screen_info, "#FFFFFF", GXxor, NULL, 2, TRUE);
@@ -592,6 +706,8 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
     screen_info->params->title_horizontal_offset =
         getIntValue ("title_horizontal_offset", rc);
 
+    if (backup)
+      g_free (backup);
     g_free (theme);
 }
 
@@ -784,6 +900,21 @@ loadSettings (ScreenInfo *screen_info)
         {"wrap_windows", NULL, G_TYPE_BOOLEAN, TRUE},
         {"wrap_workspaces", NULL, G_TYPE_BOOLEAN, TRUE},
         {"zoom_desktop", NULL, G_TYPE_BOOLEAN, TRUE},
+        {"sandboxed_theme_fallback", NULL, G_TYPE_BOOLEAN, FALSE},
+        {"fallback_button_offset", NULL, G_TYPE_INT, TRUE},
+        {"fallback_button_spacing", NULL, G_TYPE_INT, TRUE},
+        {"fallback_full_width_title", NULL, G_TYPE_BOOLEAN, TRUE},
+        {"fallback_maximized_offset", NULL, G_TYPE_INT, TRUE},
+        {"fallback_shadow_delta_height", NULL, G_TYPE_INT, TRUE},
+        {"fallback_shadow_delta_width", NULL, G_TYPE_INT, TRUE},
+        {"fallback_shadow_delta_x", NULL, G_TYPE_INT, TRUE},
+        {"fallback_shadow_delta_y", NULL, G_TYPE_INT, TRUE},
+        {"fallback_show_app_icon", NULL, G_TYPE_BOOLEAN, TRUE},
+        {"fallback_title_horizontal_offset", NULL, G_TYPE_INT, TRUE},
+        {"fallback_title_shadow_active", NULL, G_TYPE_STRING, TRUE},
+        {"fallback_title_shadow_inactive", NULL, G_TYPE_STRING, TRUE},
+        {"fallback_title_vertical_offset_active", NULL, G_TYPE_INT, TRUE},
+        {"fallback_title_vertical_offset_inactive", NULL, G_TYPE_INT, TRUE},        
         {NULL, NULL, G_TYPE_INVALID, FALSE}
     };
 
@@ -955,11 +1086,19 @@ unloadTheme (ScreenInfo *screen_info)
     {
         xfwmPixmapFree (&screen_info->sides[i][ACTIVE]);
         xfwmPixmapFree (&screen_info->sides[i][INACTIVE]);
+        xfwmPixmapFree (&screen_info->sides[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->sides[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapFree (&screen_info->sides[i][PROTECTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->sides[i][PROTECTEDINACTIVE]);
     }
     for (i = 0; i < CORNER_COUNT; i++)
     {
         xfwmPixmapFree (&screen_info->corners[i][ACTIVE]);
         xfwmPixmapFree (&screen_info->corners[i][INACTIVE]);
+        xfwmPixmapFree (&screen_info->corners[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->corners[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapFree (&screen_info->corners[i][PROTECTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->corners[i][PROTECTEDINACTIVE]);
     }
     for (i = 0; i < BUTTON_COUNT; i++)
     {
@@ -972,8 +1111,16 @@ unloadTheme (ScreenInfo *screen_info)
     {
         xfwmPixmapFree (&screen_info->title[i][ACTIVE]);
         xfwmPixmapFree (&screen_info->title[i][INACTIVE]);
+        xfwmPixmapFree (&screen_info->title[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->title[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapFree (&screen_info->title[i][PROTECTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->title[i][PROTECTEDINACTIVE]);
         xfwmPixmapFree (&screen_info->top[i][ACTIVE]);
         xfwmPixmapFree (&screen_info->top[i][INACTIVE]);
+        xfwmPixmapFree (&screen_info->top[i][UNTRUSTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->top[i][UNTRUSTEDINACTIVE]);
+        xfwmPixmapFree (&screen_info->top[i][PROTECTEDACTIVE]);
+        xfwmPixmapFree (&screen_info->top[i][PROTECTEDINACTIVE]);
     }
     if (screen_info->box_gc != None)
     {
@@ -1254,7 +1401,8 @@ cb_xfwm4_channel_property_changed(XfconfChannel *channel, const gchar *property_
                       || (!strcmp (name, "shadow_opacity"))
                       || (!strcmp (name, "title_horizontal_offset"))
                       || (!strcmp (name, "title_vertical_offset_active"))
-                      || (!strcmp (name, "title_vertical_offset_inactive")))
+                      || (!strcmp (name, "title_vertical_offset_inactive"))
+                      || (!strncmp (name, "fallback_", 9)))
                 {
                     /* These properties are not configurable via xfconf */
                 }
