@@ -1837,6 +1837,11 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
                 c->sandbox_name);
     }
 
+    if(!FLAG_TEST (c->xfwm_flags, XFWM_FLAG_HAS_BORDER) && c->sandboxed)
+    {
+        FLAG_SET (c->xfwm_flags, XFWM_FLAG_HAS_BORDER);
+    }
+
     /* Apply startup notification properties if available */
     sn_client_startup_properties (c);
 
