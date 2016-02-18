@@ -497,6 +497,10 @@ initialize (gint compositor_mode, gboolean replace_wm)
 
     initModifiers (main_display_info->dpy);
 
+#ifdef HAVE_LIBNOTIFY
+	notify_init ("xfwm4");
+#endif
+
     setupHandler (TRUE);
 
     nscreens = gdk_display_get_n_screens (main_display_info->gdisplay);

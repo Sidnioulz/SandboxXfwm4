@@ -79,6 +79,7 @@ myDisplayInitAtoms (DisplayInfo *display_info)
         "CONTAINER",
         "FIREJAIL_SANDBOX_NAME",
         "FIREJAIL_SANDBOX_TYPE",
+        "FIREJAIL_SANDBOX_WORKSPACE",
         "_GTK_FRAME_EXTENTS",
         "_GTK_HIDE_TITLEBAR_WHEN_MAXIMIZED",
         "_GTK_SHOW_WINDOW_MENU",

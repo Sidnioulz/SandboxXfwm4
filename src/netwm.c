@@ -303,7 +303,8 @@ clientUpdateNetWmDesktop (Client * c, XClientMessageEvent * ev)
         }
         if ((guint) ev->data.l[0] != (guint) c->win_workspace)
         {
-            clientSetWorkspace (c, (guint) ev->data.l[0], TRUE);
+            //FIXME should it be true!?
+            clientSetWorkspace (c, (guint) ev->data.l[0], TRUE, FALSE);
         }
     }
     else

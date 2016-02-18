@@ -6,6 +6,7 @@ bin_PROGRAMS = \
 xfwm4_workspace_settings_SOURCES = \
 	workspace-settings.c \
 	xfwm4-workspace-dialog_ui.h \
+	xfwm4-workspace-security_ui.h \
 	monitor-icon.h
 
 xfwm4_workspace_settings_CFLAGS = \
@@ -84,7 +85,11 @@ BUILT_SOURCES = \
 	monitor-icon.h \
 	xfwm4-dialog_ui.h \
 	xfwm4-tweaks-dialog_ui.h \
-	xfwm4-workspace-dialog_ui.h
+	xfwm4-workspace-dialog_ui.h \
+	xfwm4-workspace-security_ui.h
+
+xfwm4-workspace-security_ui.h: xfwm4-workspace-security.glade
+	$(AM_V_GEN) exo-csource --static --strip-comments --strip-content --name=workspace_security_ui $< >$@
 
 xfwm4-workspace-dialog_ui.h: xfwm4-workspace-dialog.glade
 	$(AM_V_GEN) exo-csource --static --strip-comments --strip-content --name=workspace_dialog_ui $< >$@
@@ -113,6 +118,7 @@ desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 EXTRA_DIST = \
 	$(desktop_in_files)  \
 	xfwm4-workspace-dialog.glade  \
+	xfwm4-workspace-security.glade  \
 	xfwm4-tweaks-dialog.glade  \
 	xfwm4-dialog.glade \
 	monitor-icon.png

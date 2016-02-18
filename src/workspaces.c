@@ -177,6 +177,28 @@ modify_with_wrap (int value, int by, int limit, gboolean wrap)
     return value;
 }
 
+gboolean
+workspaceGetFromName (ScreenInfo *screen_info, const gchar *name, guint *ws)
+{
+    guint i;
+
+    TRACE ("entering workspaceGetFromName");
+
+    if (!ws)
+        return FALSE;
+
+    for (i = 0; i < screen_info->workspace_count; i++)
+    {
+      if (g_strcmp0 (screen_info->workspace_names[i], name) == 0)
+      {
+        *ws = i;
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+}
+
 /* returns TRUE if the workspace was changed, FALSE otherwise */
 gboolean
 workspaceMove (ScreenInfo *screen_info, gint rowmod, gint colmod, Client * c, guint32 timestamp)
@@ -287,7 +309,13 @@ workspaceSwitch (ScreenInfo *screen_info, gint new_ws, Client * c2, gboolean upd
 
     if (c2)
     {
-        clientSetWorkspace (c2, new_ws, FALSE);
+        clientSetWorkspace (c2, new_ws, FALSE, TRUE);
+        gint skipped_ws = c2->win_workspace;
+        if (skipped_ws != new_ws)
+        {
+            workspaceSwitch (screen_info, skipped_ws, c2, update_focus, timestamp);
+            return;
+        }
     }
 
     if (c)
@@ -306,9 +334,20 @@ workspaceSwitch (ScreenInfo *screen_info, gint new_ws, Client * c2, gboolean upd
     for (list = g_list_last(screen_info->windows_stack); list; list = g_list_previous (list))
     {
         c = (Client *) list->data;
+
         if (FLAG_TEST (c->flags, CLIENT_FLAG_STICKY))
         {
-            clientSetWorkspace (c, new_ws, TRUE);
+            if (clientAllowedToShowInSandbox (c, new_ws))
+            {
+                clientSetWorkspace (c, new_ws, TRUE, FALSE);
+                clientShow (c, FALSE);
+            }
+            else
+            {
+                FLAG_UNSET (c->xfwm_flags, CLIENT_FLAG_STICKY);
+                clientWithdraw(c, c->win_workspace, TRUE);
+                FLAG_SET (c->xfwm_flags, CLIENT_FLAG_STICKY);
+            }
         }
         else if (new_ws == (gint) c->win_workspace)
         {
@@ -446,7 +485,7 @@ workspaceSetCount (ScreenInfo * screen_info, guint count)
         c = (Client *) list->data;
         if (c->win_workspace > count - 1)
         {
-            clientSetWorkspace (c, count - 1, TRUE);
+            clientSetWorkspace (c, count - 1, TRUE, TRUE);
         }
     }
     if (screen_info->current_ws > count - 1)
@@ -484,7 +523,7 @@ workspaceInsert (ScreenInfo * screen_info, guint position)
         c = (Client *) list->data;
         if (c->win_workspace >= position)
         {
-            clientSetWorkspace (c, c->win_workspace + 1, TRUE);
+            clientSetWorkspace (c, c->win_workspace + 1, TRUE, TRUE);
         }
     }
 }
@@ -509,7 +548,7 @@ workspaceDelete (ScreenInfo * screen_info, guint position)
     {
         if (c->win_workspace > position)
         {
-            clientSetWorkspace (c, c->win_workspace - 1, TRUE);
+            clientSetWorkspace (c, c->win_workspace - 1, TRUE, TRUE);
         }
     }
 

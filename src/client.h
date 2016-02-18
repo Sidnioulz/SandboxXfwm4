@@ -309,6 +309,7 @@ struct _Client
     netWindowType type;
     sandboxType sandboxed;
     char *sandbox_name;
+    char *sandbox_workspace;
     char *container_name;
     gint x;
     gint y;
@@ -429,6 +430,9 @@ void                     clientUngrabButtons                    (Client *);
 Client                  *clientGetFromWindow                    (Client *,
                                                                  Window,
                                                                  unsigned short);
+gboolean                 clientAllowedToShowInSandbox           (Client *c,
+                                                                 guint ws);
+gboolean                 clientWorkspaceLocked                  (Client *c);
 void                     clientShow                             (Client *,
                                                                  gboolean);
 void                     clientWithdraw                         (Client *,
@@ -449,6 +453,7 @@ void                     clientSetLayer                         (Client *,
                                                                  guint);
 void                     clientSetWorkspace                     (Client *,
                                                                  guint,
+                                                                 gboolean,
                                                                  gboolean);
 void                     clientShade                            (Client *);
 void                     clientUnshade                          (Client *);

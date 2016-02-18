@@ -85,6 +85,7 @@ xfwm4_CFLAGS =								\
 	$(PRESENT_EXTENSION_CFLAGS)					\
 	$(RANDR_CFLAGS)							\
 	$(RENDER_CFLAGS)						\
+	$(LIBNOTIFY_CFLAGS)						\
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\"				\
 	-DDATADIR=\"$(datadir)\"					\
 	-DHELPERDIR=\"$(HELPER_PATH_PREFIX)\"				\
@@ -104,6 +105,7 @@ xfwm4_LDADD =								\
 	$(LIBXFCE4UTIL_LIBS)						\
 	$(LIBXFCONF_LIBS)						\
 	$(PRESENT_EXTENSION_LIBS)					\
+	$(LIBNOTIFY_LIBS)						\
 	$(RANDR_LIBS) 							\
 	$(RENDER_LIBS)							\
 	$(MATH_LIBS)

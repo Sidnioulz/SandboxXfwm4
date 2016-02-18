@@ -411,7 +411,7 @@ handleKeyPress (DisplayInfo *display_info, XKeyEvent * ev)
                 if ((guint) (key - KEY_MOVE_WORKSPACE_1) < screen_info->workspace_count)
                 {
                     clientRaise (c, None);
-                    clientSetWorkspace (c, key - KEY_MOVE_WORKSPACE_1, TRUE);
+                    clientSetWorkspace (c, key - KEY_MOVE_WORKSPACE_1, TRUE, FALSE);
                 }
                 break;
             case KEY_POPUP_MENU:
@@ -1926,6 +1926,8 @@ handleClientMessage (DisplayInfo *display_info, XClientMessageEvent * ev)
         else if ((ev->message_type == display_info->atoms[NET_WM_DESKTOP]) && (ev->format == 32))
         {
             TRACE ("client \"%s\" (0x%lx) has received a NET_WM_DESKTOP event", c->name, c->window);
+            printf ("DBG: client \"%s\" (0x%lx) has received a NET_WM_DESKTOP event\n\n\n\n", c->name, c->window);
+            //FIXME
             clientUpdateNetWmDesktop (c, ev);
         }
         else if ((ev->message_type == display_info->atoms[NET_CLOSE_WINDOW]) && (ev->format == 32))
@@ -2368,7 +2370,7 @@ menu_callback (Menu * menu, MenuOp op, Window xid, gpointer menu_data, gpointer 
                 frameQueueDraw (c, FALSE);
                 break;
             case MENU_OP_WORKSPACES:
-                clientSetWorkspace (c, GPOINTER_TO_INT (item_data), TRUE);
+                clientSetWorkspace (c, GPOINTER_TO_INT (item_data), TRUE, FALSE);
                 break;
             case MENU_OP_DELETE:
                 clientClose (c);

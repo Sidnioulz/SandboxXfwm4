@@ -260,6 +260,9 @@ gboolean                 getSandboxType                         (DisplayInfo *,
 gboolean                 getSandboxName                         (DisplayInfo *,
                                                                  Window,
                                                                  gchar **);
+gboolean                 getSandboxWorkspace                    (DisplayInfo *,
+                                                                 Window,
+                                                                 gchar **);
 gboolean                 getWindowCommand                       (DisplayInfo *,
                                                                  Window,
                                                                  char ***,

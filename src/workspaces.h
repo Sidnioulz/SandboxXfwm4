@@ -38,6 +38,9 @@
 #include "placement.h"
 #include "client.h"
 
+gboolean                workspaceGetFromName                    (ScreenInfo *,
+                                                                 const gchar *,
+                                                                 guint *);
 gboolean                workspaceMove                           (ScreenInfo *,
                                                                  int,
                                                                  int,

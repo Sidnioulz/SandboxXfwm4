@@ -64,6 +64,12 @@
 #include "xsync.h"
 #include "event_filter.h"
 
+#ifdef HAVE_LIBNOTIFY
+#include <libnotify/notify.h>
+#include <libnotify/notification.h>
+#include <libnotify/notify-enum-types.h>
+#endif
+
 /* Event mask definition */
 
 #define POINTER_EVENT_MASK \
@@ -1283,6 +1289,37 @@ clientGetWMProtocols (Client *c)
         WM_FLAG_PING : 0);
 }
 
+static GHashTable *
+clientNotificationIgnoreCache (void)
+{
+    static GHashTable *ignoreCache = NULL;
+
+    if (ignoreCache == NULL)
+        ignoreCache = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, NULL);
+
+    return ignoreCache;
+}
+
+static gboolean
+clientNotificationIsIgnored (Client *c)
+{
+    return g_hash_table_contains (clientNotificationIgnoreCache (), c);
+}
+
+static void
+clientNotificationIgnore (Client *c)
+{
+    GHashTable *ignoreCache = clientNotificationIgnoreCache ();
+    g_hash_table_add (ignoreCache, c);
+}
+
+static void
+clientNotificationClearIgnore (Client *c)
+{
+    GHashTable *ignoreCache = clientNotificationIgnoreCache ();
+    g_hash_table_remove (ignoreCache, c);
+}
+
 static void
 clientFree (Client *c)
 {
@@ -1291,6 +1328,7 @@ clientFree (Client *c)
     TRACE ("entering clientFree");
     TRACE ("freeing client \"%s\" (0x%lx)", c->name, c->window);
 
+    clientNotificationClearIgnore (c);
     clientClearFocus (c);
     if (clientGetLastRaise (c->screen_info) == c)
     {
@@ -1339,6 +1377,10 @@ clientFree (Client *c)
     if (c->sandbox_name)
     {
         g_free (c->sandbox_name);
+    }
+    if (c->sandbox_workspace)
+    {
+        g_free (c->sandbox_workspace);
     }
     if (c->hostname)
     {
@@ -1574,6 +1616,7 @@ clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
 
     c->sandboxed = UNSANDBOXED;
     c->sandbox_name = NULL;
+    c->sandbox_workspace = NULL;
     c->container_name = NULL;
 
     g_return_if_fail(c != NULL);
@@ -1593,6 +1636,10 @@ clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
     // the name of the sandbox domain to which this process belongs (internal to containers)
     if (!getSandboxName(display_info, c->window, &c->sandbox_name))
       c->sandbox_name = NULL;
+
+    // the name of the workspace to which this sandboxed client is locked, if any
+    if (!getSandboxWorkspace(display_info, c->window, &c->sandbox_workspace))
+      c->sandbox_workspace = NULL;
 
     // the identity of the container (e.g. Docker, MBox, Firejail)
     if (!getContainerName(display_info, c->window, &c->container_name))
@@ -2281,6 +2328,73 @@ clientGetFromWindow (Client *c, Window w, unsigned short mode)
     return NULL;
 }
 
+/* whether the client is locked to a specific workspace */
+gboolean
+clientWorkspaceLocked (Client *c)
+{
+    if (!c)
+        return FALSE;
+    else if (c->sandboxed && c->sandbox_workspace && g_strcmp0 (c->sandbox_workspace, ""))
+        return TRUE;
+    else
+        return FALSE;
+}
+
+gboolean
+clientIsXfce (Client *c)
+{
+    if (!c)
+        return FALSE;
+
+    return g_strcmp0 (c->class.res_name, "xfce4-panel") == 0             || g_strcmp0 (c->class.res_name, "xfdesktop") == 0 ||
+           g_strcmp0 (c->class.res_name, "notify-osd") == 0              || g_strcmp0 (c->class.res_name, "xfce4-notifyd") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-appfinder") == 0         || g_strcmp0 (c->class.res_name, "xfdesktop-settings") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-mouse-settings") == 0    || g_strcmp0 (c->class.res_name, "xfce4-power-manager-settings") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-session-settings") == 0  || g_strcmp0 (c->class.res_name, "xfce4-accessibility-settings") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-display-settings") == 0  || g_strcmp0 (c->class.res_name, "xfce4-appearance-settings") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-keyboard-settings") == 0 || g_strcmp0 (c->class.res_name, "xfce4-notes-settings") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-screenshooter") == 0     || g_strcmp0 (c->class.res_name, "xfce4-taskmanager") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-notifyd-config") == 0    || g_strcmp0 (c->class.res_name, "xfce4-settings-manager") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-mime-settings") == 0     || g_strcmp0 (c->class.res_name, "xfce4-session-logout") == 0 ||
+           g_strcmp0 (c->class.res_name, "xfce4-clipman-settings") == 0  || g_strcmp0 (c->class.res_name, "Mugshot") == 0 ||
+           g_strcmp0 (c->name, "Whisker Menu") == 0                      || g_strcmp0 (c->name, "MenuLibre") == 0;
+}
+
+
+/* whether the client should be displayed
+ *  - ws-locked client in the right secure workspace
+ *  - ws-locked client from a workspace that allows clients to escape
+ *  - unsandboxed client in a normal workspace
+ *  - unsandboxed client in a secure workspace that lets it in untouched
+ */
+gboolean
+clientAllowedToShowInSandbox (Client *c, guint ws)
+{
+    guint parent_ws;
+    gboolean parent_lets_out = FALSE;
+
+    TRACE ("entering clientForbiddenToShowInSandbox");
+
+    if (!c || ws > c->screen_info->workspace_count - 1)
+        return FALSE;
+
+    /* some way to identify our Xfce clients -- NO, this is NOT secure */
+    if (clientIsXfce (c))
+        return TRUE;
+    else if (clientWorkspaceLocked (c))
+    {
+        if (workspaceGetFromName (c->screen_info, c->sandbox_workspace, &parent_ws))
+            parent_lets_out = xfce_workspace_let_sandboxed_out (parent_ws);
+        return parent_lets_out || (xfce_workspace_is_secure (ws) && g_strcmp0 (c->sandbox_workspace, c->screen_info->workspace_names[ws]) == 0);
+    }
+    else if (!xfce_workspace_is_secure (ws))
+        return TRUE;
+    else if (xfce_workspace_let_unsandboxed_in (ws) && (xfce_workspace_unsandboxed_in_behavior (ws) == XFCE_WORKSPACE_ENTER_UNSANDBOXED))
+        return TRUE;
+    else
+        return FALSE;
+}
+
 static void
 clientSetWorkspaceSingle (Client *c, guint ws)
 {
@@ -2316,13 +2430,339 @@ clientSetWorkspaceSingle (Client *c, guint ws)
     FLAG_SET (c->xfwm_flags, XFWM_FLAG_WORKSPACE_SET);
 }
 
+static void
+clientManageMappingPostWorkspaceSwitch (Client *c, guint previous_ws, guint ws, gboolean manage_mapping)
+{
+    if (manage_mapping && !FLAG_TEST (c->flags, CLIENT_FLAG_ICONIFIED))
+    {
+        if (previous_ws == c->screen_info->current_ws)
+        {
+            clientWithdraw (c, c->screen_info->current_ws, FALSE);
+        }
+        if ((FLAG_TEST (c->flags, CLIENT_FLAG_STICKY) || (ws == c->screen_info->current_ws)))
+        {
+            clientShow (c, FALSE);
+        }
+    }
+}
+
+static void
+clientSecurityNotify (Client *c, gboolean ignore, gchar *title, gchar *body, gchar *icon, ...)
+{
+#ifdef HAVE_LIBNOTIFY
+	  static NotifyNotification *notification = NULL;
+
+    if (notification == NULL)
+#if NOTIFY_CHECK_VERSION (0, 7, 0)
+	    notification = notify_notification_new ("xfwm4", NULL, NULL);
+#else
+	    notification = notify_notification_new ("xfwm4", NULL, NULL, NULL);
+#endif
+
+    if (clientNotificationIsIgnored(c))
+    {
+        if (ignore)
+            return;
+        else
+            clientNotificationClearIgnore(c);
+    }
+
+	  notify_notification_update (notification, title, body, icon);
+	  notify_notification_clear_actions (notification);
+
+    const char *action, *label;
+		NotifyActionCallback callback;
+		gpointer  	user_data;
+		GFreeFunc  	free_func; 
+
+    va_list actions;
+    va_start (actions, icon);
+    do
+    {
+        action = va_arg (actions, const char *);
+        if (action)
+        {
+            label = va_arg (actions, const char *);
+            callback = va_arg (actions, NotifyActionCallback);
+            user_data = va_arg (actions, gpointer);
+            free_func = va_arg (actions, GFreeFunc);
+
+            notify_notification_add_action (notification,
+                                            action,
+                                            label,
+                                            callback,
+                                            user_data,
+                                            free_func);
+        }
+    } while (action);
+    va_end (actions);
+
+	  GError *error = NULL;
+	  if (!notify_notification_show (notification, &error))
+	  {
+		    g_warning ("xfwm4: failed to notify of a security event: %s / %s (error: %s)\n", title, body, error->message);
+		    g_error_free (error);
+	  }
+#endif
+}
+
+typedef struct {
+    Client *client;
+    guint previous_ws;
+    gboolean focused;
+} ProposeSbReturnData;
+
+static void
+proposeSbCb (NotifyNotification *n, const gchar *action, gpointer user_data)
+{
+    if (g_strcmp0 (action, "sandbox") == 0)
+    {
+        Client *c = (Client *) user_data;
+        printf ("TODO: Client %s ought to be sandboxed\n", c->name);
+        //TODO
+    }
+    else if (g_strcmp0 (action, "return") == 0)
+    {
+        ProposeSbReturnData *data = (ProposeSbReturnData *) user_data;
+        clientSetWorkspaceSingle (data->client, data->previous_ws);
+
+        if (data->focused)
+        {
+            clientRaise (data->client, None);
+            clientShow (data->client, TRUE);
+            clientSetFocus (data->client->screen_info, data->client,
+                            myDisplayGetCurrentTime (data->client->screen_info->display_info),
+                            FOCUS_IGNORE_MODAL);
+        }
+
+        g_free (data);
+    }
+    else if (g_strcmp0 (action, "ignore") == 0)
+    {
+        Client *c = (Client *) user_data;
+        clientNotificationIgnore (c);
+    }
+}
+
+static void
+clientProposeSandboxing (Client *c, guint win_ws, guint ws, const gchar *action)
+{
+    gchar *ws_name = xfce_workspace_get_workspace_name (ws);
+    gchar *title = g_strdup_printf ("Turn %s into a sandboxed application?", c->class.res_class);
+    gchar *body = g_strdup_printf ("%s is a secure workspace set to display sandboxed applications only.", ws_name);
+
+    if (win_ws != ws)
+    {
+        gchar *return_label = g_strdup_printf ("Send Back to Workspace %d", win_ws + 1);
+        ProposeSbReturnData *data = g_malloc0 (sizeof (ProposeSbReturnData));
+        data->client = c;
+        data->previous_ws = win_ws;
+        data->focused = c == clientGetFocusOrPending ();
+        clientSecurityNotify (c, TRUE, title, body, "firejail-link",
+                              "ignore", "Ignore", proposeSbCb, c, NULL,
+                              "return", return_label, proposeSbCb, data, NULL,
+                              "sandbox", "Sandbox (not supported yet)", proposeSbCb, c, NULL,
+                              NULL);
+        g_free (return_label);
+    }
+    else
+        clientSecurityNotify (c, TRUE, title, body, "firejail-link",
+                              "ignore", "Ignore", proposeSbCb, c, NULL,
+                              "sandbox", "Sandbox (not supported yet)", proposeSbCb, c, NULL,
+                              NULL);
+    
+
+	  g_free (ws_name);
+	  g_free (title);
+	  g_free (body);
+}
+
+static void
+clientBlockedFromEnteringSecureWS (Client *c, guint ws)
+{
+    gchar *ws_name = xfce_workspace_get_workspace_name (ws);
+    gchar *title = g_strdup_printf ("%s could not be moved to %s", c->class.res_class, ws_name);
+    gchar *body = g_strdup ("This secure workspace does not allow foreign applications in.");
+
+    clientSecurityNotify (c, FALSE, title, body, "firejail-workspaces", NULL);
+
+	  g_free (ws_name);
+	  g_free (title);
+	  g_free (body);
+}
+
+static void
+clientBlockedFromEscapingSecureWS (Client *c, guint ws)
+{
+    gchar *ws_name = xfce_workspace_get_workspace_name (ws);
+    gchar *title = g_strdup_printf ("%s could not be moved to %s", c->class.res_class, ws_name);
+    gchar *current_name = xfce_workspace_get_workspace_name (c->win_workspace);
+    gchar *body = g_strdup_printf ("Secure workspace %s does not allow sandboxed applications out.", current_name);
+
+    clientSecurityNotify (c, FALSE, title, body, "firejail-workspaces", NULL);
+
+	  g_free (current_name);
+	  g_free (ws_name);
+	  g_free (title);
+	  g_free (body);
+}
+
+static gboolean
+clientShouldCycleUpwards (Client *c, guint previous_ws, guint ws)
+{
+    float middle = ((float) c->screen_info->workspace_count) / 2.0;
+    gint diff = ((gint) previous_ws - (gint) ws + c->screen_info->workspace_count) % c->screen_info->workspace_count;
+    
+    if (diff < middle)
+        return FALSE;
+    else if (diff > middle)
+        return TRUE;
+    // when we're equi-distant, prefer going towards the direction that requires no wrapping
+    else if (previous_ws < middle)
+        return TRUE;
+    else
+        return FALSE;
+}
+
+static void
+clientSkipNextSecureWorkspace (Client *c, guint previous_ws, guint ws, gboolean manage_mapping, gboolean allow_skipping)
+{
+    gboolean goRight;
+    gboolean compatible;
+    guint next_ws;
+    guint parent_ws;
+    gboolean parent_lets_out = FALSE;
+
+    TRACE ("entering clientSkipNextSecureWorkspace");
+
+    goRight = clientShouldCycleUpwards (c, previous_ws, ws);
+    next_ws = ws;
+
+    if (workspaceGetFromName (c->screen_info, c->sandbox_workspace, &parent_ws))
+        parent_lets_out = xfce_workspace_let_sandboxed_out (parent_ws);
+
+    do
+    {
+        // check if compatible
+        compatible = parent_lets_out || (xfce_workspace_is_secure (next_ws) && g_strcmp0 (c->sandbox_workspace, c->screen_info->workspace_names[next_ws]) == 0);
+
+        if (compatible)
+        {
+            clientSetWorkspaceSingle (c, next_ws);
+            clientManageMappingPostWorkspaceSwitch (c, previous_ws, next_ws, manage_mapping);
+            return;
+        }
+        // if skipping is forbidden, we must return from the function
+        else if (!allow_skipping)
+        {
+            clientBlockedFromEscapingSecureWS (c, ws);
+            return;
+        }
+
+        // cycle to next candidate
+        if (goRight)
+        {
+            next_ws++;
+            if (next_ws > c->screen_info->workspace_count - 1)
+            {
+                if (c->screen_info->params->wrap_cycle)
+                    next_ws = 0;
+                else
+                    return;
+            }
+        }
+        else
+        {
+            if (next_ws == 0)
+            {
+                if (c->screen_info->params->wrap_cycle)
+                    next_ws = c->screen_info->workspace_count - 1;
+                else
+                    return;
+            }
+            else
+                next_ws--;
+        }
+    } while (next_ws != ws);
+
+    clientBlockedFromEscapingSecureWS (c, ws);
+}
+
+static void
+clientSkipNextNormalWorkspace (Client *c, guint previous_ws, guint ws, gboolean manage_mapping, gboolean allow_skipping)
+{
+    gboolean goRight;
+    guint next_ws;
+
+    TRACE ("entering clientSkipNextNormalWorkspace");
+
+    goRight = clientShouldCycleUpwards (c, previous_ws, ws);
+    next_ws = ws;
+
+    do
+    {
+        // check if compatible
+        if (!xfce_workspace_is_secure (next_ws) ||
+            (xfce_workspace_let_unsandboxed_in (next_ws) && (xfce_workspace_unsandboxed_in_behavior (next_ws) == XFCE_WORKSPACE_ENTER_UNSANDBOXED)))
+        {
+            clientSetWorkspaceSingle (c, next_ws);
+            clientManageMappingPostWorkspaceSwitch (c, previous_ws, next_ws, manage_mapping);
+            return;
+        }
+        else if (xfce_workspace_unsandboxed_in_behavior (next_ws) == XFCE_WORKSPACE_ENTER_REPLACE)
+        {
+            if (!(FLAG_TEST (c->flags, CLIENT_FLAG_STICKY)))
+            {
+                clientProposeSandboxing (c, c->win_workspace, next_ws, "switched to workspace");
+                clientSetWorkspaceSingle (c, next_ws);
+                clientManageMappingPostWorkspaceSwitch (c, previous_ws, next_ws, manage_mapping);
+                return;
+            }
+        }
+        // if skipping is forbidden, we must return from the function
+        else if (!allow_skipping)
+        {
+            clientBlockedFromEnteringSecureWS (c, ws);
+            return;
+        }
+
+        // cycle to next candidate
+        if (goRight)
+        {
+            next_ws++;
+            if (next_ws > c->screen_info->workspace_count - 1)
+            {
+                if (c->screen_info->params->wrap_cycle)
+                    next_ws = 0;
+                else
+                    return;
+            }
+        }
+        else
+        {
+            if (next_ws == 0)
+            {
+                if (c->screen_info->params->wrap_cycle)
+                    next_ws = c->screen_info->workspace_count - 1;
+                else
+                    return;
+            }
+            else
+                next_ws--;
+        }
+    } while (next_ws != ws);
+
+    clientBlockedFromEnteringSecureWS (c, ws);
+}
+
 void
-clientSetWorkspace (Client *c, guint ws, gboolean manage_mapping)
+clientSetWorkspace (Client *c, guint ws, gboolean manage_mapping, gboolean allow_skipping)
 {
     Client *c2;
     GList *list_of_windows;
     GList *list;
     guint previous_ws;
+    gboolean isXfce;
 
     g_return_if_fail (c != NULL);
 
@@ -2338,24 +2778,30 @@ clientSetWorkspace (Client *c, guint ws, gboolean manage_mapping)
     for (list = list_of_windows; list; list = g_list_next (list))
     {
         c2 = (Client *) list->data;
+        previous_ws = c2->win_workspace;
 
         if (c2->win_workspace != ws)
         {
-            TRACE ("setting client \"%s\" (0x%lx) to current_ws %d", c->name, c->window, ws);
-
-            previous_ws = c2->win_workspace;
-            clientSetWorkspaceSingle (c2, ws);
-
-            if (manage_mapping && !FLAG_TEST (c2->flags, CLIENT_FLAG_ICONIFIED))
+            /* client is sandboxed and workspace-locked, find nearest compatible ws */
+            isXfce = clientIsXfce (c2);
+            if (!isXfce && clientWorkspaceLocked (c2))
             {
-                if (previous_ws == c2->screen_info->current_ws)
-                {
-                    clientWithdraw (c2, c2->screen_info->current_ws, FALSE);
-                }
-                if (FLAG_TEST (c2->flags, CLIENT_FLAG_STICKY) || (ws == c2->screen_info->current_ws))
-                {
-                    clientShow (c2, FALSE);
-                }
+                clientSkipNextSecureWorkspace (c2, previous_ws, ws, manage_mapping, allow_skipping);
+                return;
+            }
+
+            /* client is unsandboxed and requested workspace is for sandboxed clients */
+            else if (!isXfce && xfce_workspace_is_secure (ws))
+            {
+                clientSkipNextNormalWorkspace(c2, previous_ws, ws, manage_mapping, allow_skipping);
+                return;
+            }
+            else
+            {
+                TRACE ("setting client \"%s\" (0x%lx) to current_ws %d", c->name, c->window, ws);
+
+                clientSetWorkspaceSingle (c2, ws);
+                clientManageMappingPostWorkspaceSwitch (c2, previous_ws, ws, manage_mapping);
             }
         }
     }
@@ -2409,6 +2855,19 @@ clientShow (Client *c, gboolean deiconify)
 
     g_return_if_fail (c != NULL);
     TRACE ("entering clientShow \"%s\" (0x%lx)", c->name, c->window);
+
+    if (!clientAllowedToShowInSandbox (c, c->screen_info->current_ws))
+    {
+        if (xfce_workspace_unsandboxed_in_behavior (c->screen_info->current_ws) == XFCE_WORKSPACE_ENTER_REPLACE)
+        {
+            clientProposeSandboxing(c, c->win_workspace, c->screen_info->current_ws, "displayed");
+        }
+        else
+        {
+            TRACE ("Client \"%s\" should technically not be allowed in workspace %d", c->name, c->screen_info->current_ws+1);
+        }
+        //FIXME DEBUG return;
+    }
 
     list_of_windows = clientListTransientOrModal (c);
     for (list = g_list_last (list_of_windows); list; list = g_list_previous (list))
@@ -2621,6 +3080,15 @@ clientActivate (Client *c, guint32 timestamp, gboolean source_is_application)
     sibling = clientGetTransientFor(c);
     focused = clientGetFocus ();
 
+    /* if (!clientAllowedToShowInSandbox (c, screen_info->current_ws))
+    {
+        if (xfce_workspace_unsandboxed_in_behavior (screen_info->current_ws) == XFCE_WORKSPACE_ENTER_REPLACE)
+        {
+            clientProposeSandboxing(c, screen_info->current_ws, "activated");
+        }
+        return;
+    } */
+
     if ((screen_info->current_ws == c->win_workspace) || (screen_info->params->activate_action != ACTIVATE_ACTION_NONE))
     {
         if ((focused) && (c != focused))
@@ -2633,11 +3101,12 @@ clientActivate (Client *c, guint32 timestamp, gboolean source_is_application)
             /* We are explicitely activating a window that was shown before show-desktop */
             clientClearAllShowDesktop (screen_info);
         }
+
         if (screen_info->current_ws != c->win_workspace)
         {
             if (screen_info->params->activate_action == ACTIVATE_ACTION_BRING)
             {
-                clientSetWorkspace (c, screen_info->current_ws, TRUE);
+                clientSetWorkspace (c, screen_info->current_ws, TRUE, FALSE);
             }
             else
             {
@@ -2947,7 +3416,7 @@ clientStick (Client *c, gboolean include_transients)
         FLAG_SET (c->flags, CLIENT_FLAG_STICKY);
         setHint (display_info, c->window, NET_WM_DESKTOP, (unsigned long) ALL_WORKSPACES);
     }
-    clientSetWorkspace (c, screen_info->current_ws, TRUE);
+    clientSetWorkspace (c, screen_info->current_ws, TRUE, FALSE);
     clientSetNetState (c);
 }
 
@@ -2985,7 +3454,7 @@ clientUnstick (Client *c, gboolean include_transients)
         FLAG_UNSET (c->flags, CLIENT_FLAG_STICKY);
         setHint (display_info, c->window, NET_WM_DESKTOP, (unsigned long) screen_info->current_ws);
     }
-    clientSetWorkspace (c, screen_info->current_ws, TRUE);
+    clientSetWorkspace (c, screen_info->current_ws, TRUE, TRUE);
     clientSetNetState (c);
 }
 

@@ -1119,6 +1119,34 @@ getSandboxName (DisplayInfo *display_info, Window window, gchar **sandbox_name)
 }
 
 gboolean
+getSandboxWorkspace (DisplayInfo *display_info, Window window, gchar **sandbox_workspace)
+{
+    Window id;
+    XTextProperty tp;
+
+    TRACE ("entering getSandboxWorkspace");
+
+    g_return_val_if_fail (sandbox_workspace != NULL, FALSE);
+    *sandbox_workspace = NULL;
+    g_return_val_if_fail (window != None, FALSE);
+
+    if (getWindowProp (display_info, window, WM_CLIENT_LEADER, &id) && (id != None))
+    {
+        if (XGetTextProperty (display_info->dpy, id, &tp, display_info->atoms[FIREJAIL_SANDBOX_WORKSPACE]))
+        {
+            if (tp.encoding == XA_STRING && tp.format == 8 && tp.nitems != 0)
+            {
+                *sandbox_workspace = g_strdup ((gchar *) tp.value);
+                XFree (tp.value);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+gboolean
 getWindowCommand (DisplayInfo *display_info, Window window, char ***argv, int *argc)
 {
     Window id;
