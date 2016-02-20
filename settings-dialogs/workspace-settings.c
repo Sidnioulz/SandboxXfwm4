@@ -189,6 +189,10 @@ reset_workspace_security_labels(gint ws_num)
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
+    property = g_strdup_printf("/security/workspace_%d/disable_sound", ws_num);
+    xfconf_channel_reset_property(channel, property, TRUE);
+    g_free(property);
+
     property = g_strdup_printf("/security/workspace_%d/proxy_ip", ws_num);
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
@@ -758,6 +762,13 @@ workspace_security_configure_widgets (gint           ws_num_display,
     property = g_strdup_printf("/security/workspace_%d/overlay_fs_private_home", ws_num);
     xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)overlay_fs_private_home_check, "active");
     xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(overlay_fs_private_home_check)));
+    g_free(property);
+
+    /* Other options */
+    GtkWidget *disable_sound_check = GTK_WIDGET (gtk_builder_get_object (builder, "disable_sound_check"));
+    property = g_strdup_printf("/security/workspace_%d/disable_sound", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)disable_sound_check, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(disable_sound_check)));
     g_free(property);
 
     GtkWidget *vbox = GTK_WIDGET (gtk_builder_get_object (builder, "main-vbox"));
