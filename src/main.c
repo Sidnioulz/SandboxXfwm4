@@ -64,6 +64,12 @@
 #include "compositor.h"
 #include "spinning_cursor.h"
 
+#ifdef HAVE_LIBNOTIFY
+#include <libnotify/notify.h>
+#include <libnotify/notification.h>
+#include <libnotify/notify-enum-types.h>
+#endif
+
 #define BASE_EVENT_MASK \
     SubstructureNotifyMask|\
     StructureNotifyMask|\
