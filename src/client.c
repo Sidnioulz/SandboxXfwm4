@@ -1872,6 +1872,7 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     TRACE ("Client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
 
     /* firejail sandbox */
+    clientNotificationIgnore (c);
     clientReadSandboxParameters(display_info, c);
 
     if (c->sandboxed)
@@ -2102,6 +2103,7 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     DBG ("client \"%s\" (0x%lx) is now managed", c->name, c->window);
     DBG ("client_count=%d", screen_info->client_count);
 
+    clientNotificationClearIgnore (c);
     return c;
 }
 
