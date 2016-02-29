@@ -34,6 +34,7 @@
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 #include <libxfce4util/libxfce4util.h>
+#include <xfconf/xfconf.h>
 
 #include "display.h"
 #include "screen.h"
@@ -298,6 +299,11 @@ workspaceSwitch (ScreenInfo *screen_info, gint new_ws, Client * c2, gboolean upd
     else if ((new_ws > (gint) screen_info->workspace_count - 1) || (new_ws < 0))
     {
         return;
+    }
+
+    if (screen_info->xfwm4_channel)
+    {
+      xfconf_channel_set_uint(screen_info->xfwm4_channel, "/general/current_workspace", new_ws);
     }
 
     screen_info->previous_ws = screen_info->current_ws;

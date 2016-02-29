@@ -1411,6 +1411,14 @@ cb_xfwm4_channel_property_changed(XfconfChannel *channel, const gchar *property_
                     g_warning("The property '%s' of type int is not supported", property_name);
                 }
                 break;
+            case G_TYPE_UINT:
+                if (!strcmp (name, "current_workspace"))
+                {
+                  /* Don't allow external modifications */
+                  if (screen_info && screen_info->current_ws != g_value_get_uint (value))
+                    xfconf_channel_set_uint(screen_info->xfwm4_channel, "/general/current_workspace", screen_info->current_ws);
+                }
+                break;
             case G_TYPE_BOOLEAN:
                 if (!strcmp (name, "box_move"))
                 {
