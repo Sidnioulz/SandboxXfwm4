@@ -55,6 +55,7 @@ enum
     COL_NAME,
     COL_SANDBOX,
     COL_SETTINGS,
+    COL_SANDBOX_ALLOWED,
     N_COLS,
 };
 
@@ -475,12 +476,12 @@ xfconf_workspace_security_labels_update(GPtrArray *names,
         path = gtk_tree_path_new_from_indices(i, -1);
         if(gtk_tree_model_get_iter(model, &iter, path)) {
             if (strcmp(new_name, "") == 0)
-                gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, FALSE, -1);
+                gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, FALSE, COL_SANDBOX_ALLOWED, i!=0, -1);
             else
-                gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, TRUE, -1);
+                gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, i!=0, COL_SANDBOX_ALLOWED, i!=0, -1);
             
         } else {
-            gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, FALSE, -1);
+            gtk_list_store_set(GTK_LIST_STORE(model), &iter, COL_SANDBOX, FALSE, COL_SANDBOX_ALLOWED, i!=0, -1);
         }
 
         gtk_tree_path_free(path);
@@ -846,7 +847,7 @@ workspace_dialog_setup_names_treeview(GtkBuilder *builder,
 
     treeview = GTK_WIDGET (gtk_builder_get_object(builder, "treeview_ws_names"));
 
-    ls = gtk_list_store_new(N_COLS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_BOOLEAN, GDK_TYPE_PIXBUF);
+    ls = gtk_list_store_new(N_COLS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_BOOLEAN, GDK_TYPE_PIXBUF, G_TYPE_BOOLEAN);
     gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(ls));
 
     render = gtk_cell_renderer_text_new();
@@ -872,13 +873,8 @@ workspace_dialog_setup_names_treeview(GtkBuilder *builder,
     gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), col);
 
     render = gtk_cell_renderer_toggle_new ();
-    col = gtk_tree_view_column_new_with_attributes(_("Sandboxed"),
-                                                   render,
-                                                   "active", COL_SANDBOX,
-                                                   NULL);
+    gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeview), -1, _("Sandboxed"), render, "active", COL_SANDBOX, "sensitive", COL_SANDBOX_ALLOWED, NULL);
     g_signal_connect (render, "toggled", G_CALLBACK (treeview_ws_sandboxed_cell_edited), treeview);
-
-    gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), col);
 
 
     render = gtk_cell_renderer_pixbuf_new();
