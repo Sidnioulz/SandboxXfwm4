@@ -150,11 +150,15 @@ reset_workspace_security_labels(gint ws_num)
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
-    property = g_strdup_printf("/security/workspace_%d/enter_replace", ws_num);
+    property = g_strdup_printf("/security/workspace_%d/radio_unsandboxed_lock_out", ws_num);
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
-    property = g_strdup_printf("/security/workspace_%d/enter_unsandboxed", ws_num);
+    property = g_strdup_printf("/security/workspace_%d/radio_unsandboxed_enter", ws_num);
+    xfconf_channel_reset_property(channel, property, TRUE);
+    g_free(property);
+
+    property = g_strdup_printf("/security/workspace_%d/radio_unsandboxed_replace", ws_num);
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
@@ -162,11 +166,11 @@ reset_workspace_security_labels(gint ws_num)
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
-    property = g_strdup_printf("/security/workspace_%d/let_enter_ws", ws_num);
+    property = g_strdup_printf("/security/workspace_%d/radio_sandbox_lock_out", ws_num);
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
-    property = g_strdup_printf("/security/workspace_%d/let_escape_ws", ws_num);
+    property = g_strdup_printf("/security/workspace_%d/radio_sandbox_escape", ws_num);
     xfconf_channel_reset_property(channel, property, TRUE);
     g_free(property);
 
@@ -556,25 +560,13 @@ workspace_security_dialog_response (GtkWidget *dialog,
 
 
 static void
-on_let_enter_ws_toggled(GtkToggleButton *button,
-                        gpointer user_data)
+on_radio_unsandboxed_replace_toggled(GtkToggleButton *button,
+                                     gpointer user_data)
 {
   GtkBuilder *builder = (GtkBuilder *)user_data;
   gboolean active = gtk_toggle_button_get_active(button);
 
-  GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, "alignment_let_enter_ws"));
-  gtk_widget_set_sensitive(widget, active);
-}
-
-
-static void
-on_radio_enter_replace_toggled(GtkToggleButton *button,
-                               gpointer user_data)
-{
-  GtkBuilder *builder = (GtkBuilder *)user_data;
-  gboolean active = gtk_toggle_button_get_active(button);
-
-  GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, "alignment_radio_enter_replace"));
+  GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, "alignment_radio_unsandboxed_replace"));
   gtk_widget_set_sensitive(widget, active);
 }
 
@@ -652,37 +644,40 @@ workspace_security_configure_widgets (gint           ws_num_display,
     g_signal_connect(G_OBJECT(channel), "property-changed::" WORKSPACE_NAMES_PROP, G_CALLBACK(xfconf_security_dialog_workspace_names_changed), entry_name);
 
     /* Enter workspace checkbox */
-    GtkWidget *let_enter_ws = GTK_WIDGET (gtk_builder_get_object (builder, "let_enter_ws"));
-    property = g_strdup_printf("/security/workspace_%d/let_enter_ws", ws_num);
-    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)let_enter_ws, "active");
-    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(let_enter_ws)));
+    GtkWidget *radio_sandbox_lock_out = GTK_WIDGET (gtk_builder_get_object (builder, "radio_sandbox_lock_out"));
+    property = g_strdup_printf("/security/workspace_%d/sandbox_lock_out", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_sandbox_lock_out, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_sandbox_lock_out)));
     g_free(property);
 
-    g_signal_connect(let_enter_ws, "toggled", G_CALLBACK(on_let_enter_ws_toggled), builder);
-    on_let_enter_ws_toggled(GTK_TOGGLE_BUTTON(let_enter_ws), builder);
-
     /* Escape workspace checkbox */
-    GtkWidget *let_escape_ws = GTK_WIDGET (gtk_builder_get_object (builder, "let_escape_ws"));
-    property = g_strdup_printf("/security/workspace_%d/let_escape_ws", ws_num);
-    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)let_escape_ws, "active");
-    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(let_escape_ws)));
+    GtkWidget *radio_sandbox_escape = GTK_WIDGET (gtk_builder_get_object (builder, "radio_sandbox_escape"));
+    property = g_strdup_printf("/security/workspace_%d/sandbox_escape", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_sandbox_escape, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_sandbox_escape)));
     g_free(property);
 
     /* Radio buttons for behavior on workspace entering */
-    GtkWidget *radio_enter_unsandboxed = GTK_WIDGET (gtk_builder_get_object (builder, "radio_enter_unsandboxed"));
-    property = g_strdup_printf("/security/workspace_%d/enter_unsandboxed", ws_num);
-    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_enter_unsandboxed, "active");
-    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_enter_unsandboxed)));
+    GtkWidget *radio_lock_unsandboxed_outside = GTK_WIDGET (gtk_builder_get_object (builder, "radio_unsandboxed_lock_out"));
+    property = g_strdup_printf("/security/workspace_%d/unsandboxed_lock_out", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_lock_unsandboxed_outside, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_lock_unsandboxed_outside)));
     g_free(property);
 
-    GtkWidget *radio_enter_replace = GTK_WIDGET (gtk_builder_get_object (builder, "radio_enter_replace"));
-    property = g_strdup_printf("/security/workspace_%d/enter_replace", ws_num);
-    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_enter_replace, "active");
-    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_enter_replace)));
+    GtkWidget *radio_unsandboxed_enter = GTK_WIDGET (gtk_builder_get_object (builder, "radio_unsandboxed_enter"));
+    property = g_strdup_printf("/security/workspace_%d/unsandboxed_enter", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_unsandboxed_enter, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_unsandboxed_enter)));
     g_free(property);
 
-    g_signal_connect(radio_enter_replace, "toggled", G_CALLBACK(on_radio_enter_replace_toggled), builder);
-    on_radio_enter_replace_toggled(GTK_TOGGLE_BUTTON(radio_enter_replace), builder);
+    GtkWidget *radio_unsandboxed_replace = GTK_WIDGET (gtk_builder_get_object (builder, "radio_unsandboxed_replace"));
+    property = g_strdup_printf("/security/workspace_%d/unsandboxed_replace", ws_num);
+    xfconf_g_property_bind(channel, property, G_TYPE_BOOLEAN, (GObject *)radio_unsandboxed_replace, "active");
+    xfconf_channel_set_bool(channel, property, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radio_unsandboxed_replace)));
+    g_free(property);
+
+    g_signal_connect(radio_unsandboxed_replace, "toggled", G_CALLBACK(on_radio_unsandboxed_replace_toggled), builder);
+    on_radio_unsandboxed_replace_toggled(GTK_TOGGLE_BUTTON(radio_unsandboxed_replace), builder);
 
     /* File re-opening options */
     GtkWidget *reopen_files_check = GTK_WIDGET (gtk_builder_get_object (builder, "reopen_files_check"));
