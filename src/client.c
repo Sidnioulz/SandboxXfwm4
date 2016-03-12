@@ -70,6 +70,9 @@
 #include <libnotify/notify-enum-types.h>
 #endif
 
+#include <firejail/common.h>
+#include <firejail/exechelper.h>
+
 /* Event mask definition */
 
 #define POINTER_EVENT_MASK \
@@ -1608,10 +1611,92 @@ clientRestoreSizePos (Client *c)
     return FALSE;
 }
 
+
+
+static void clientLoadDomainEnv (Client *c, const pid_t domain_pid)
+{
+    char    *env_path;
+    FILE    *fp;
+    char    *buffer = NULL;
+    char    *value;
+    size_t   n = 0;
+    ssize_t  linelen = 0;
+
+    env_path = g_strdup_printf("%s/%d/%s", EXECHELP_RUN_DIR, domain_pid, DOMAIN_ENV_FILE);
+    if (!env_path)
+    {
+        g_warning ("Cannot allocate memory for client id %d's sandbox domain %d environment file: %s", c->pid, domain_pid, strerror (errno));
+        return;
+    }
+
+    fp = fopen(env_path, "rb");
+    free(env_path);
+
+    if (!fp)
+    {
+        g_warning ("Cannot client id %d's sandbox domain %d environment file: %s", c->pid, domain_pid, strerror (errno));
+        return;
+    }
+
+    buffer = NULL;
+    n = 0;
+    linelen = 0;
+    errno = 0;
+    while ((linelen = getline(&buffer, &n, fp)) != -1)
+    {
+        if (buffer[linelen-1] == '\n')
+            buffer[linelen-1] = '\0';
+
+        value = strchr(buffer, '=');
+        if (value)
+        {
+            *value = 0;
+            value += 1;
+
+            if (g_strcmp0 (buffer, "FIREJAIL_SANDBOX_TYPE") == 0)
+            {
+                if (g_strcmp0 (value, "untrusted") == 0)
+                    c->sandboxed = SANDBOXED_UNTRUSTED;
+                else if (g_strcmp0 (value, "protected") == 0)
+                    c->sandboxed = SANDBOXED_PROTECTED;
+            }
+            else if (g_strcmp0 (buffer, "FIREJAIL_SANDBOX_NAME") == 0)
+            {
+                c->sandbox_name = g_strdup (value);
+            }
+            else if (g_strcmp0 (buffer, "FIREJAIL_SANDBOX_WORKSPACE") == 0)
+            {
+                c->sandbox_workspace = g_strdup (value);
+            }
+            else if (g_strcmp0 (buffer, "container") == 0 || g_strcmp0 (buffer, "CONTAINER") == 0)
+            {
+                c->container_name = g_strdup (value);
+            }
+        }
+        else
+        {
+            g_warning ("Invalid line in client id %d's sandbox domain %d environment file: %s", c->pid, domain_pid, buffer);
+        }
+
+        free(buffer);
+        buffer = NULL;
+        n = 0;
+    }
+
+    fclose(fp);
+}
+
+
+
 static void
 clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
 {
-    //TODO rely on resproto to identify clients http://www.x.org/releases/X11R7.7/doc/resourceproto/resproto.txt
+    FILE    *fp;
+    gchar   *path;
+    ssize_t  gotten;
+    char *buf, *ptr;
+    size_t allocated, len;
+
     TRACE ("entering clientReadSandboxParameters %d", c->pid);
 
     c->sandboxed = UNSANDBOXED;
@@ -1622,6 +1707,74 @@ clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
     g_return_if_fail(c != NULL);
     g_return_if_fail(c->pid > 0);
 
+#if 0
+    path = g_strdup_printf ("/proc/%d/environ", c->pid);
+    if (!path)
+    {
+        g_warning ("Cannot allocate memory to open environment variables of client id %d to verify if it is sandboxed: %s", c->pid, strerror (errno));
+        return;
+    }
+
+    fp = fopen (path, "rb");
+    g_free (path);
+
+    if (!fp)
+    {
+        if (errno == EPERM || errno == EACCES)
+            g_warning ("Cannot read environment variables of client id %d because of insufficient privileges", c->pid);
+        else
+            g_warning ("Cannot open environment variables of client id %d to verify if it is sandboxed: %s", c->pid, strerror (errno));
+        return;
+    }
+
+    buf = NULL;
+    allocated = 0;
+    while ((gotten = getline (&buf, &allocated, fp)) != -1)
+    {
+        ptr = buf;
+        len = 0;
+        while (gotten > 0)
+        {
+            if (ptr && strncmp (ptr, "FIREJAIL_SANDBOX_TYPE=", 22) == 0)
+            {
+                if (g_strcmp0 (ptr+22, "untrusted") == 0)
+                    c->sandboxed = SANDBOXED_UNTRUSTED;
+                else if (g_strcmp0 (ptr+22, "protected") == 0)
+                    c->sandboxed = SANDBOXED_PROTECTED;
+            }
+            else if (strncmp (ptr, "FIREJAIL_SANDBOX_NAME=", 22) == 0)
+            {
+                c->sandbox_name = g_strdup (ptr+22);
+            }
+            else if (strncmp (ptr, "FIREJAIL_SANDBOX_WORKSPACE=", 27) == 0)
+            {
+                c->sandbox_workspace = g_strdup (ptr+27);
+            }
+            else if (strncmp (ptr, "container=", 10) == 0 || strncmp (ptr, "CONTAINER=", 10) == 0)
+            {
+                c->container_name = g_strdup (ptr+10);
+            }
+
+            len = strlen (ptr) + 1;
+            ptr += len;
+            gotten -= len;
+        }
+
+        free (buf);
+        buf = NULL;
+        allocated = 0;
+    }
+
+    if (errno)
+        g_warning ("An error occurred while reading environment variables of client id %d to verify if it is sandboxed: %s", c->pid, strerror (errno));
+
+    fclose (fp);
+#endif
+#if 1
+    //FIXME THIS FAILS FOR QT CLIENTS BECAUSE THE PROPERTIES ARE NOT PROPERLY SET
+    /* NOTE: the solution below relies on the injection of X parameters by
+       clients and is both insecure and relatively unreliable. It was only
+       used as a prototype and should not be relied upon in production. */
     // whether the sandboxed process is untrusted, or trusted but isolated
     gchar *sandbox_type = NULL;
     if (getSandboxType(display_info, c->window, &sandbox_type))
@@ -1644,6 +1797,24 @@ clientReadSandboxParameters (DisplayInfo *display_info, Client *c)
     // the identity of the container (e.g. Docker, MBox, Firejail)
     if (!getContainerName(display_info, c->window, &c->container_name))
       c->container_name = NULL;
+#endif
+
+    //FIXME THIS ONLY WORKS FOR NAMED SANDBOXES
+    // let's see if we can find sandboxing parameters via the sandbox name for buggy Qt clients
+    if (c->sandboxed != UNSANDBOXED)
+        return;
+
+    gchar *host_name = NULL;
+    if (!getWindowHostname(display_info, c->window, &host_name))
+        return;
+
+    pid_t pid;
+    if (name2pid(host_name, &pid) == 0)
+    {
+        clientLoadDomainEnv (c, pid);
+    }
+
+    g_free (host_name);
 }
 
 Client *
