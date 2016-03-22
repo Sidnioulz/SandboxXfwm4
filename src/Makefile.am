@@ -86,6 +86,7 @@ xfwm4_CFLAGS =								\
 	$(RANDR_CFLAGS)							\
 	$(RENDER_CFLAGS)						\
 	$(LIBNOTIFY_CFLAGS)						\
+	$(FIREJAILUTIL_CFLAGS) \
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\"				\
 	-DDATADIR=\"$(datadir)\"					\
 	-DHELPERDIR=\"$(HELPER_PATH_PREFIX)\"				\
@@ -108,6 +109,7 @@ xfwm4_LDADD =								\
 	$(LIBNOTIFY_LIBS)						\
 	$(RANDR_LIBS) 							\
 	$(RENDER_LIBS)							\
+	$(FIREJAILUTIL_LIBS) \
 	$(MATH_LIBS)
 
 EXTRA_DIST = 								\
