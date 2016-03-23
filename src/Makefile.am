@@ -96,6 +96,7 @@ xfwm4_CFLAGS =								\
 xfwm4_LDADD =								\
 	$(GLIB_LIBS) 							\
 	$(GTK_LIBS) 							\
+	$(FIREJAILUTIL_LIBS) \
 	$(COMPOSITOR_LIBS)						\
 	$(EPOXY_LIBS)							\
 	$(LIBSTARTUP_NOTIFICATION_LIBS)					\
@@ -109,7 +110,6 @@ xfwm4_LDADD =								\
 	$(LIBNOTIFY_LIBS)						\
 	$(RANDR_LIBS) 							\
 	$(RENDER_LIBS)							\
-	$(FIREJAILUTIL_LIBS) \
 	$(MATH_LIBS)
 
 EXTRA_DIST = 								\
