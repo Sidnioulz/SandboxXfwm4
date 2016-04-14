@@ -4,14 +4,14 @@
   <!-- interface-requires libxfce4ui 4.5 -->
   <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkAdjustment" id="adjustment_network_dl">
-    <property name="upper">200000</property>
-    <property name="value">100000</property>
+    <property name="upper">2000000</property>
+    <property name="value">1000000</property>
     <property name="step_increment">10</property>
     <property name="page_increment">100</property>
   </object>
   <object class="GtkAdjustment" id="adjustment_network_ul">
-    <property name="upper">200000</property>
-    <property name="value">100000</property>
+    <property name="upper">2000000</property>
+    <property name="value">1000000</property>
     <property name="step_increment">10</property>
     <property name="page_increment">100</property>
   </object>
@@ -512,7 +512,6 @@
                                     <child>
                                       <object class="GtkTable" id="table1">
                                         <property name="visible">True</property>
-                                        <property name="sensitive">False</property>
                                         <property name="can_focus">False</property>
                                         <property name="n_rows">2</property>
                                         <property name="n_columns">3</property>

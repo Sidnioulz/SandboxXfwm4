@@ -720,8 +720,8 @@ workspace_security_configure_widgets (gint           ws_num_display,
     /* Bandwidth settings */
     GtkWidget *spinbutton_dl = GTK_WIDGET (gtk_builder_get_object (builder, "spinbutton_dl"));
     GtkWidget *spinbutton_ul = GTK_WIDGET (gtk_builder_get_object (builder, "spinbutton_ul"));
-    gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_dl), -1, 200000);
-    gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_ul), -1, 200000);
+    gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_dl), 0, 200000);
+    gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_ul), 0, 200000);
     property = g_strdup_printf("/security/workspace_%d/bandwidth_download", ws_num);
     xfconf_g_property_bind(channel, property, G_TYPE_INT, (GObject *)spinbutton_dl, "value");
     xfconf_channel_set_int(channel, property, gtk_spin_button_get_value(GTK_SPIN_BUTTON(spinbutton_dl)));
