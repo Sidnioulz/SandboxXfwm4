@@ -60,69 +60,127 @@ PNG_FILES = 								\
 	top-left-active.png						\
 	top-left-inactive.png						\
 	top-right-active.png						\
-	top-right-inactive.png
-
-SVG_FILES = 								\
-	bottom-active.svg						\
-	bottom-inactive.svg						\
-	bottom-left-active.svg						\
-	bottom-left-inactive.svg					\
-	bottom-right-active.svg						\
-	bottom-right-inactive.svg					\
-	close-active.svg						\
-	close-inactive.svg						\
-	close-prelight.svg						\
-	close-pressed.svg						\
-	hide-active.svg							\
-	hide-inactive.svg						\
-	hide-prelight.svg						\
-	hide-pressed.svg						\
-	left-active.svg							\
-	left-inactive.svg						\
-	maximize-active.svg						\
-	maximize-inactive.svg						\
-	maximize-prelight.svg						\
-	maximize-pressed.svg						\
-	maximize-toggled-active.svg					\
-	maximize-toggled-inactive.svg					\
-	maximize-toggled-prelight.svg					\
-	maximize-toggled-pressed.svg					\
-	menu-active.svg							\
-	menu-inactive.svg						\
-	menu-prelight.svg						\
-	menu-pressed.svg						\
-	right-active.svg						\
-	right-inactive.svg						\
-	shade-active.svg						\
-	shade-inactive.svg						\
-	shade-prelight.svg						\
-	shade-pressed.svg						\
-	shade-toggled-active.svg					\
-	shade-toggled-inactive.svg					\
-	shade-toggled-prelight.svg					\
-	shade-toggled-pressed.svg					\
-	stick-active.svg						\
-	stick-inactive.svg						\
-	stick-prelight.svg						\
-	stick-pressed.svg						\
-	stick-toggled-active.svg					\
-	stick-toggled-inactive.svg					\
-	stick-toggled-prelight.svg					\
-	stick-toggled-pressed.svg					\
-	title-1-active.svg						\
-	title-1-inactive.svg						\
-	title-2-active.svg						\
-	title-2-inactive.svg						\
-	title-3-active.svg						\
-	title-3-inactive.svg						\
-	title-4-active.svg						\
-	title-4-inactive.svg						\
-	title-5-active.svg						\
-	title-5-inactive.svg						\
-	top-left-active.svg						\
-	top-left-inactive.svg						\
-	top-right-active.svg						\
-	top-right-inactive.svg
+	top-right-inactive.png			            \
+	bottom-left-protected-active.png  \
+	bottom-left-protected-inactive.png  \
+	bottom-left-untrusted-active.png  \
+	bottom-left-untrusted-inactive.png  \
+	bottom-protected-active.png  \
+	bottom-protected-inactive.png  \
+	bottom-right-protected-active.png  \
+	bottom-right-protected-inactive.png  \
+	bottom-right-untrusted-active.png  \
+	bottom-right-untrusted-inactive.png  \
+	bottom-untrusted-active.png  \
+	bottom-untrusted-inactive.png  \
+	close-protected-active.png  \
+	close-protected-inactive.png  \
+	close-protected-prelight.png  \
+	close-protected-pressed.png  \
+	close-untrusted-active.png  \
+	close-untrusted-inactive.png  \
+	close-untrusted-prelight.png  \
+	close-untrusted-pressed.png  \
+	hide-protected-active.png  \
+	hide-protected-inactive.png  \
+	hide-protected-prelight.png  \
+	hide-protected-pressed.png  \
+	hide-untrusted-active.png  \
+	hide-untrusted-inactive.png  \
+	hide-untrusted-prelight.png  \
+	hide-untrusted-pressed.png  \
+	left-protected-active.png  \
+	left-protected-inactive.png  \
+	left-untrusted-active.png  \
+	left-untrusted-inactive.png  \
+	maximize-protected-active.png  \
+	maximize-protected-inactive.png  \
+	maximize-protected-prelight.png  \
+	maximize-protected-pressed.png  \
+	maximize-toggled-protected-active.png  \
+	maximize-toggled-protected-inactive.png  \
+	maximize-toggled-protected-prelight.png  \
+	maximize-toggled-protected-pressed.png  \
+	maximize-toggled-untrusted-active.png  \
+	maximize-toggled-untrusted-inactive.png  \
+	maximize-toggled-untrusted-prelight.png  \
+	maximize-toggled-untrusted-pressed.png  \
+	maximize-untrusted-active.png  \
+	maximize-untrusted-inactive.png  \
+	maximize-untrusted-prelight.png  \
+	maximize-untrusted-pressed.png  \
+	menu-protected-active.png  \
+	menu-protected-inactive.png  \
+	menu-protected-prelight.png  \
+	menu-protected-pressed.png  \
+	menu-untrusted-active.png  \
+	menu-untrusted-inactive.png  \
+	menu-untrusted-prelight.png  \
+	menu-untrusted-pressed.png  \
+	right-protected-active.png  \
+	right-protected-inactive.png  \
+	right-untrusted-active.png  \
+	right-untrusted-inactive.png  \
+	shade-protected-active.png  \
+	shade-protected-inactive.png  \
+	shade-protected-prelight.png  \
+	shade-protected-pressed.png  \
+	shade-toggled-protected-active.png  \
+	shade-toggled-protected-inactive.png  \
+	shade-toggled-protected-prelight.png  \
+	shade-toggled-protected-pressed.png  \
+	shade-toggled-untrusted-active.png  \
+	shade-toggled-untrusted-inactive.png  \
+	shade-toggled-untrusted-prelight.png  \
+	shade-toggled-untrusted-pressed.png  \
+	shade-untrusted-active.png  \
+	shade-untrusted-inactive.png  \
+	shade-untrusted-prelight.png  \
+	shade-untrusted-pressed.png  \
+	stick-protected-active.png  \
+	stick-protected-inactive.png  \
+	stick-protected-prelight.png  \
+	stick-protected-pressed.png  \
+	stick-toggled-protected-active.png  \
+	stick-toggled-protected-inactive.png  \
+	stick-toggled-protected-prelight.png  \
+	stick-toggled-protected-pressed.png  \
+	stick-toggled-untrusted-active.png  \
+	stick-toggled-untrusted-inactive.png  \
+	stick-toggled-untrusted-prelight.png  \
+	stick-toggled-untrusted-pressed.png  \
+	stick-untrusted-active.png  \
+	stick-untrusted-inactive.png  \
+	stick-untrusted-prelight.png  \
+	stick-untrusted-pressed.png  \
+	title-1-protected-active.png  \
+	title-1-protected-inactive.png  \
+	title-1-untrusted-active.png  \
+	title-1-untrusted-inactive.png  \
+	title-2-protected-active.png  \
+	title-2-protected-inactive.png  \
+	title-2-untrusted-active.png  \
+	title-2-untrusted-inactive.png  \
+	title-3-protected-active.png  \
+	title-3-protected-inactive.png  \
+	title-3-untrusted-active.png  \
+	title-3-untrusted-inactive.png  \
+	title-4-protected-active.png  \
+	title-4-protected-inactive.png  \
+	title-4-untrusted-active.png  \
+	title-4-untrusted-inactive.png  \
+	title-5-protected-active.png  \
+	title-5-protected-inactive.png  \
+	title-5-untrusted-active.png  \
+	title-5-untrusted-inactive.png  \
+	top-left-protected-active.png  \
+	top-left-protected-inactive.png  \
+	top-left-untrusted-active.png  \
+	top-left-untrusted-inactive.png  \
+	top-right-protected-active.png  \
+	top-right-protected-inactive.png  \
+	top-right-untrusted-active.png  \
+	top-right-untrusted-inactive.png
 
 XPM_FILES = 								\
 	bottom-active.xpm						\
@@ -184,7 +242,127 @@ XPM_FILES = 								\
 	top-left-active.xpm						\
 	top-left-inactive.xpm						\
 	top-right-active.xpm						\
-	top-right-inactive.xpm
+	top-right-inactive.xpm						\
+	bottom-left-protected-active.xpm  \
+	bottom-left-protected-inactive.xpm  \
+	bottom-left-untrusted-active.xpm  \
+	bottom-left-untrusted-inactive.xpm  \
+	bottom-protected-active.xpm  \
+	bottom-protected-inactive.xpm  \
+	bottom-right-protected-active.xpm  \
+	bottom-right-protected-inactive.xpm  \
+	bottom-right-untrusted-active.xpm  \
+	bottom-right-untrusted-inactive.xpm  \
+	bottom-untrusted-active.xpm  \
+	bottom-untrusted-inactive.xpm  \
+	close-protected-active.xpm  \
+	close-protected-inactive.xpm  \
+	close-protected-prelight.xpm  \
+	close-protected-pressed.xpm  \
+	close-untrusted-active.xpm  \
+	close-untrusted-inactive.xpm  \
+	close-untrusted-prelight.xpm  \
+	close-untrusted-pressed.xpm  \
+	hide-protected-active.xpm  \
+	hide-protected-inactive.xpm  \
+	hide-protected-prelight.xpm  \
+	hide-protected-pressed.xpm  \
+	hide-untrusted-active.xpm  \
+	hide-untrusted-inactive.xpm  \
+	hide-untrusted-prelight.xpm  \
+	hide-untrusted-pressed.xpm  \
+	left-protected-active.xpm  \
+	left-protected-inactive.xpm  \
+	left-untrusted-active.xpm  \
+	left-untrusted-inactive.xpm  \
+	maximize-protected-active.xpm  \
+	maximize-protected-inactive.xpm  \
+	maximize-protected-prelight.xpm  \
+	maximize-protected-pressed.xpm  \
+	maximize-toggled-protected-active.xpm  \
+	maximize-toggled-protected-inactive.xpm  \
+	maximize-toggled-protected-prelight.xpm  \
+	maximize-toggled-protected-pressed.xpm  \
+	maximize-toggled-untrusted-active.xpm  \
+	maximize-toggled-untrusted-inactive.xpm  \
+	maximize-toggled-untrusted-prelight.xpm  \
+	maximize-toggled-untrusted-pressed.xpm  \
+	maximize-untrusted-active.xpm  \
+	maximize-untrusted-inactive.xpm  \
+	maximize-untrusted-prelight.xpm  \
+	maximize-untrusted-pressed.xpm  \
+	menu-protected-active.xpm  \
+	menu-protected-inactive.xpm  \
+	menu-protected-prelight.xpm  \
+	menu-protected-pressed.xpm  \
+	menu-untrusted-active.xpm  \
+	menu-untrusted-inactive.xpm  \
+	menu-untrusted-prelight.xpm  \
+	menu-untrusted-pressed.xpm  \
+	right-protected-active.xpm  \
+	right-protected-inactive.xpm  \
+	right-untrusted-active.xpm  \
+	right-untrusted-inactive.xpm  \
+	shade-protected-active.xpm  \
+	shade-protected-inactive.xpm  \
+	shade-protected-prelight.xpm  \
+	shade-protected-pressed.xpm  \
+	shade-toggled-protected-active.xpm  \
+	shade-toggled-protected-inactive.xpm  \
+	shade-toggled-protected-prelight.xpm  \
+	shade-toggled-protected-pressed.xpm  \
+	shade-toggled-untrusted-active.xpm  \
+	shade-toggled-untrusted-inactive.xpm  \
+	shade-toggled-untrusted-prelight.xpm  \
+	shade-toggled-untrusted-pressed.xpm  \
+	shade-untrusted-active.xpm  \
+	shade-untrusted-inactive.xpm  \
+	shade-untrusted-prelight.xpm  \
+	shade-untrusted-pressed.xpm  \
+	stick-protected-active.xpm  \
+	stick-protected-inactive.xpm  \
+	stick-protected-prelight.xpm  \
+	stick-protected-pressed.xpm  \
+	stick-toggled-protected-active.xpm  \
+	stick-toggled-protected-inactive.xpm  \
+	stick-toggled-protected-prelight.xpm  \
+	stick-toggled-protected-pressed.xpm  \
+	stick-toggled-untrusted-active.xpm  \
+	stick-toggled-untrusted-inactive.xpm  \
+	stick-toggled-untrusted-prelight.xpm  \
+	stick-toggled-untrusted-pressed.xpm  \
+	stick-untrusted-active.xpm  \
+	stick-untrusted-inactive.xpm  \
+	stick-untrusted-prelight.xpm  \
+	stick-untrusted-pressed.xpm  \
+	title-1-protected-active.xpm  \
+	title-1-protected-inactive.xpm  \
+	title-1-untrusted-active.xpm  \
+	title-1-untrusted-inactive.xpm  \
+	title-2-protected-active.xpm  \
+	title-2-protected-inactive.xpm  \
+	title-2-untrusted-active.xpm  \
+	title-2-untrusted-inactive.xpm  \
+	title-3-protected-active.xpm  \
+	title-3-protected-inactive.xpm  \
+	title-3-untrusted-active.xpm  \
+	title-3-untrusted-inactive.xpm  \
+	title-4-protected-active.xpm  \
+	title-4-protected-inactive.xpm  \
+	title-4-untrusted-active.xpm  \
+	title-4-untrusted-inactive.xpm  \
+	title-5-protected-active.xpm  \
+	title-5-protected-inactive.xpm  \
+	title-5-untrusted-active.xpm  \
+	title-5-untrusted-inactive.xpm  \
+	top-left-protected-active.xpm  \
+	top-left-protected-inactive.xpm  \
+	top-left-untrusted-active.xpm  \
+	top-left-untrusted-inactive.xpm  \
+	top-right-protected-active.xpm  \
+	top-right-protected-inactive.xpm  \
+	top-right-untrusted-active.xpm  \
+	top-right-untrusted-inactive.xpm
 
 theme_DATA = 								\
 	README								\
@@ -193,19 +371,5 @@ theme_DATA = 								\
 	$(PNG_FILES)
 
 EXTRA_DIST =								\
-	$(theme_DATA)							\
-	$(SVG_FILES)
+	$(theme_DATA)							
 
-noinst_DATA =								\
-	$(SVG_FILES)
-
-vacuum-defs:
-	for svg_file in $(SVG_FILES); do \
-		inkscape --without-gui --vacuum-defs --file=$$svg_file; \
-	done
-
-update-png:
-	for svg_file in $(SVG_FILES); do \
-		image=$${svg_file%.svg}; \
-		rsvg-convert -f png $$svg_file > $$image.png; \
-	done
