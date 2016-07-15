@@ -572,6 +572,19 @@ on_radio_unsandboxed_replace_toggled(GtkToggleButton *button,
 
 
 static void
+on_net_auto_check_toggled(GtkToggleButton *button,
+                          gpointer user_data)
+{
+  GtkBuilder *builder = (GtkBuilder *)user_data;
+  gboolean active = gtk_toggle_button_get_active (button);
+  gboolean sensitive = gtk_widget_get_sensitive (GTK_WIDGET (button));
+
+  GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, "alignment_net_auto_check"));
+  gtk_widget_set_sensitive (widget, active && sensitive);
+}
+
+
+static void
 on_enable_network_toggled(GtkToggleButton *button,
                           gpointer user_data)
 {
@@ -580,21 +593,10 @@ on_enable_network_toggled(GtkToggleButton *button,
 
   GtkWidget *net_auto_check = GTK_WIDGET (gtk_builder_get_object (builder, "net_auto_check"));
   gtk_widget_set_sensitive(net_auto_check, active);
+  on_net_auto_check_toggled (GTK_TOGGLE_BUTTON (net_auto_check), builder);
 
   GtkWidget *isolate_dbus_check = GTK_WIDGET (gtk_builder_get_object (builder, "isolate_dbus_check"));
   gtk_widget_set_sensitive(isolate_dbus_check, active);
-}
-
-
-static void
-on_net_auto_check_toggled(GtkToggleButton *button,
-                          gpointer user_data)
-{
-  GtkBuilder *builder = (GtkBuilder *)user_data;
-  gboolean active = gtk_toggle_button_get_active(button);
-
-  GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (builder, "alignment_net_auto_check"));
-  gtk_widget_set_sensitive(widget, active);
 }
 
 
